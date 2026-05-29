@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
     "axios": "^1.16.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.16.0",

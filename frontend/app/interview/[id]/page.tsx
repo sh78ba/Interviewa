@@ -1,12 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import api from "@/lib/api";
-
-const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
-  ssr: false,
-});
 
 interface Question {
   question_id: string;
@@ -50,7 +45,6 @@ export default function InterviewRoom() {
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const editorRef = useRef<any | null>(null);
   const finalizedRef = useRef(false);
   const fetchAndSpeakRef = useRef<(() => Promise<void>) | null>(null);
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
@@ -205,44 +199,6 @@ export default function InterviewRoom() {
     startListeningRef.current = startListening;
     processAnswerRef.current = processAnswer;
   }, [fetchAndSpeak, startListening, processAnswer]);
-
-  // Dispose Monaco editor instance on unmount to avoid unhandled rejections
-  useEffect(() => {
-    return () => {
-      try {
-        if (editorRef.current) {
-          editorRef.current.dispose();
-          editorRef.current = null;
-        }
-      } catch (e) {
-        // ignore disposal errors
-      }
-    };
-  }, []);
-
-  // Suppress noisy Monaco "Canceled" unhandled promise rejections during navigation
-  useEffect(() => {
-    const handler = (event: PromiseRejectionEvent) => {
-      try {
-        const reason = event.reason as any;
-        const msg =
-          (reason && reason.message) ||
-          (typeof reason === "string" ? reason : "");
-        if (msg && msg.toString().includes("Canceled")) {
-          // Prevent the error from being logged as an unhandled rejection
-          event.preventDefault();
-        }
-      } catch {
-        // ignore
-      }
-    };
-    window.addEventListener("unhandledrejection", handler as EventListener);
-    return () =>
-      window.removeEventListener(
-        "unhandledrejection",
-        handler as EventListener,
-      );
-  }, []);
 
   // ── Stop recording and finalize the answer ───────────────────────────────
   const stopListening = useCallback(() => {
@@ -472,7 +428,6 @@ export default function InterviewRoom() {
           style={{
             border: "1px solid #eee",
             borderRadius: 12,
-            overflow: "hidden",
             marginBottom: 20,
           }}
         >
@@ -485,23 +440,26 @@ export default function InterviewRoom() {
               borderBottom: "1px solid #eee",
             }}
           >
-            Code editor
+            Code box
           </div>
-          <MonacoEditor
-            height="280px"
-            defaultLanguage="python"
+          <textarea
             value={code}
-            onChange={(v) => setCode(v || "")}
-            onMount={(editor) => {
-              // keep a ref to dispose safely on unmount
-              editorRef.current = editor;
-            }}
-            options={{
-              minimap: { enabled: false },
+            onChange={(e) => setCode(e.target.value)}
+            spellCheck={false}
+            style={{
+              width: "100%",
+              minHeight: 280,
+              border: "none",
+              outline: "none",
+              padding: 16,
+              fontFamily:
+                'ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
               fontSize: 14,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
+              lineHeight: 1.6,
+              resize: "vertical",
+              boxSizing: "border-box",
             }}
+            placeholder="Write your code here..."
           />
         </div>
       )}

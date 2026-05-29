@@ -9,13 +9,36 @@ export default function ReportPage() {
   const { id } = useParams();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get(`/api/interview/${id}/report`).then((r) => {
-      setReport(r.data);
-      setLoading(false);
-    });
-  }, []);
+    let active = true;
+
+    const loadReport = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const r = await api.get(`/api/interview/${id}/report`);
+        if (!active) return;
+        setReport(r.data);
+      } catch (err: any) {
+        if (!active) return;
+        setError(
+          err?.response?.data?.detail ||
+            err?.message ||
+            "Unable to load the interview report right now.",
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadReport();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   if (loading)
     return (
@@ -23,6 +46,57 @@ export default function ReportPage() {
         <Navbar />
         <main style={{ maxWidth: 700, margin: "0 auto", padding: "48px 24px" }}>
           <p style={{ color: "#777" }}>Generating report...</p>
+        </main>
+      </>
+    );
+
+  if (error)
+    return (
+      <>
+        <Navbar />
+        <main style={{ maxWidth: 700, margin: "0 auto", padding: "48px 24px" }}>
+          <div
+            style={{
+              border: "1px solid #f1caca",
+              background: "#fff7f7",
+              borderRadius: 12,
+              padding: 20,
+            }}
+          >
+            <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              Report unavailable
+            </p>
+            <p style={{ color: "#666", fontSize: 14, lineHeight: 1.6 }}>
+              {error}
+            </p>
+            <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  background: "#111",
+                  color: "#fff",
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                Retry
+              </button>
+              <Link
+                href="/dashboard"
+                style={{
+                  border: "1px solid #ddd",
+                  color: "#111",
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                }}
+              >
+                Dashboard
+              </Link>
+            </div>
+          </div>
         </main>
       </>
     );
