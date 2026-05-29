@@ -50,6 +50,7 @@ export default function InterviewRoom() {
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const editorRef = useRef<any | null>(null);
   const finalizedRef = useRef(false);
   const fetchAndSpeakRef = useRef<(() => Promise<void>) | null>(null);
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
@@ -180,35 +181,17 @@ export default function InterviewRoom() {
       }
 
       // Step 2 — evaluate answer
-      setStatusText("Evaluating your answer...");
-      const evalRes = await api.post(`/api/interview/${id}/answer`, {
+      setStatusText("Recording your answer...");
+      await api.post(`/api/interview/${id}/answer`, {
         question_id: question.question_id,
         answer_text: text,
         code: "",
       });
 
-      const fb: Feedback = evalRes.data;
-      setFeedback(fb);
-      setPhase("feedback");
-
-      // Step 3 — speak feedback
-      const score = fb.score;
-      const scoreComment =
-        score >= 8
-          ? "Excellent answer!"
-          : score >= 6
-            ? "Good answer."
-            : score >= 4
-              ? "That's partially correct."
-              : "Let me give you some guidance.";
-
-      const feedbackSpeech = `${scoreComment} You scored ${score} out of 10. ${fb.feedback}`;
-      setStatusText(`Score: ${score}/10 — AI is giving feedback...`);
-      await speak(feedbackSpeech);
-
-      // Step 4 — short pause then next question
-      setStatusText("Moving to next question in 3 seconds...");
-      await new Promise((r) => setTimeout(r, 3000));
+      // Do not show interim scores. Move to next question.
+      setPhase("processing");
+      setStatusText("Answer recorded. Moving to next question...");
+      await new Promise((r) => setTimeout(r, 1000));
       await fetchAndSpeakRef.current?.();
     } catch {
       setStatusText("Something went wrong. Moving on...");
@@ -222,6 +205,44 @@ export default function InterviewRoom() {
     startListeningRef.current = startListening;
     processAnswerRef.current = processAnswer;
   }, [fetchAndSpeak, startListening, processAnswer]);
+
+  // Dispose Monaco editor instance on unmount to avoid unhandled rejections
+  useEffect(() => {
+    return () => {
+      try {
+        if (editorRef.current) {
+          editorRef.current.dispose();
+          editorRef.current = null;
+        }
+      } catch (e) {
+        // ignore disposal errors
+      }
+    };
+  }, []);
+
+  // Suppress noisy Monaco "Canceled" unhandled promise rejections during navigation
+  useEffect(() => {
+    const handler = (event: PromiseRejectionEvent) => {
+      try {
+        const reason = event.reason as any;
+        const msg =
+          (reason && reason.message) ||
+          (typeof reason === "string" ? reason : "");
+        if (msg && msg.toString().includes("Canceled")) {
+          // Prevent the error from being logged as an unhandled rejection
+          event.preventDefault();
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("unhandledrejection", handler as EventListener);
+    return () =>
+      window.removeEventListener(
+        "unhandledrejection",
+        handler as EventListener,
+      );
+  }, []);
 
   // ── Stop recording and finalize the answer ───────────────────────────────
   const stopListening = useCallback(() => {
@@ -245,22 +266,16 @@ export default function InterviewRoom() {
     setStatusText("Evaluating your solution...");
 
     try {
-      const evalRes = await api.post(`/api/interview/${id}/answer`, {
+      await api.post(`/api/interview/${id}/answer`, {
         question_id: question.question_id,
         answer_text: "See code submission",
         code: code,
       });
 
-      const fb: Feedback = evalRes.data;
-      setFeedback(fb);
-      setPhase("feedback");
-
-      const feedbackSpeech = `You scored ${fb.score} out of 10. ${fb.feedback}`;
-      setStatusText(`Score: ${fb.score}/10`);
-      await speak(feedbackSpeech);
-
-      setStatusText("Moving to next question in 3 seconds...");
-      await new Promise((r) => setTimeout(r, 3000));
+      // Hide interim scores for coding questions as well
+      setPhase("processing");
+      setStatusText("Solution recorded. Moving to next question...");
+      await new Promise((r) => setTimeout(r, 1000));
       await fetchAndSpeakRef.current?.();
     } catch {
       setStatusText("Error evaluating. Moving on...");
@@ -401,6 +416,11 @@ export default function InterviewRoom() {
         <p style={{ fontSize: 14, color: "#555", fontWeight: 500 }}>
           {statusText}
         </p>
+        <p style={{ fontSize: 12, color: "#777", marginTop: 8 }}>
+          Note: The AI preloads model answers for each question and compares
+          your responses to them. Interim scores are hidden — your final score
+          and detailed report will be shown after completing the interview.
+        </p>
       </div>
 
       {/* Question card */}
@@ -472,6 +492,10 @@ export default function InterviewRoom() {
             defaultLanguage="python"
             value={code}
             onChange={(v) => setCode(v || "")}
+            onMount={(editor) => {
+              // keep a ref to dispose safely on unmount
+              editorRef.current = editor;
+            }}
             options={{
               minimap: { enabled: false },
               fontSize: 14,

@@ -1,4 +1,4 @@
-# MockMate Start Guide
+# Interviewa Start Guide
 
 This file shows how to set up and start the project locally.
 

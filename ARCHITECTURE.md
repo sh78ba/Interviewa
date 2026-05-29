@@ -1,8 +1,8 @@
-# MockMate Architecture
+# Interviewa Architecture
 
 ## Overview
 
-MockMate is a full-stack interview practice app with a FastAPI backend and a Next.js frontend.
+Interviewa is a full-stack interview practice app with a FastAPI backend and a Next.js frontend.
 
 The system supports:
 

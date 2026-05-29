@@ -35,7 +35,7 @@ export default function Navbar() {
           textDecoration: "none",
         }}
       >
-        MockMate
+        Interviewa
       </Link>
       <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
         <Link

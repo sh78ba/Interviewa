@@ -1,4 +1,4 @@
-# Contributing to Mockmate
+# Contributing to Interviewa
 
 Thank you for your interest in contributing! We welcome issues, bug fixes, documentation improvements, and new features.
 

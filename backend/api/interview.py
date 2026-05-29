@@ -168,14 +168,24 @@ async def submit_answer(
     if req.code:
         answer_text += f"\n\nCode:\n{req.code}"
 
-    evaluation = await evaluate_answer(
-        question=q.question_text,
-        answer=answer_text,
-        topic=q.topic,
-        round_name=q.round_name,
-        level=iv.extracted_profile.get("level", "mid"),
-        what_to_look_for=q.what_to_look
-    )
+    # If the candidate provided no answer, treat as unanswered (score 0)
+    if not answer_text.strip():
+        evaluation = {
+            "score": 0,
+            "feedback": "No answer provided",
+            "strengths": "",
+            "weaknesses": "No answer",
+            "better_answer": "Provide a clear, structured response explaining your approach."
+        }
+    else:
+        evaluation = await evaluate_answer(
+            question=q.question_text,
+            answer=answer_text,
+            topic=q.topic,
+            round_name=q.round_name,
+            level=iv.extracted_profile.get("level", "mid"),
+            what_to_look_for=q.what_to_look
+        )
 
     db.add(Answer(
         interview_id=interview_id,

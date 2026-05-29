@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import UnhandledRejectionSuppressor from "@/components/UnhandledRejectionSuppressor";
 
 export const metadata: Metadata = {
-  title: "MockMate — AI Interview Practice",
+  title: "Interviewa — AI Interview Practice",
   description: "Practice technical interviews with AI",
 };
 
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <UnhandledRejectionSuppressor />
+        {children}
+      </body>
     </html>
   );
 }

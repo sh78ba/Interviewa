@@ -20,7 +20,7 @@ export default function Home() {
           textAlign: "center",
         }}
       >
-        MockMate
+        Interviewa
       </h1>
       <p
         style={{

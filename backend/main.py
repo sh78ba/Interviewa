@@ -11,7 +11,7 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="MockMate API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Interviewa API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,4 +27,4 @@ app.include_router(speech_router)
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "MockMate API"}
+    return {"status": "ok", "service": "Interviewa API"}

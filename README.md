@@ -1,6 +1,6 @@
-# Mockmate
+# Interviewa
 
-Mockmate is an open-source interview practice platform combining backend services and a Next.js frontend. This repository contains the full-stack project used to run Mockmate locally and deploy it to platforms that support Python and Next.js.
+Interviewa is an open-source interview practice platform combining backend services and a Next.js frontend. This repository contains the full-stack project used to run Interviewa locally and deploy it to platforms that support Python and Next.js.
 
 Quick links
 
