@@ -13,6 +13,23 @@ async def evaluate_answer(
     prompt = f"""
 You are a strict but fair senior engineer evaluating an interview answer.
 
+Score ONLY the candidate's actual answer to the question below.
+Do NOT reward buzzwords, vague filler, or unrelated technical topics.
+If the answer is off-topic, generic, or does not directly answer the question,
+the score MUST be low even if a few keywords are correct.
+
+Use this rubric:
+- relevance (0-4): how directly the answer addresses the question
+- correctness (0-4): whether the facts/approach are accurate
+- completeness (0-2): whether the answer is complete and specific
+
+The final score must be the sum of those three parts and must stay within 0-10.
+Hard rules:
+- Off-topic or mostly unrelated answers must score 0-3.
+- Answers that mention random services, filler, or different problem domains must not score above 3.
+- Partially correct but vague answers should score 4-6.
+- High scores (7-10) are only for answers that are directly relevant, accurate, and complete.
+
 Round: {round_name}
 Topic: {topic}
 Level expected: {level}
@@ -20,11 +37,12 @@ Question: {question}
 What to look for: {what_to_look_for}
 Candidate answer: {answer}
 
-Score 1-10. Be strict for senior roles, lenient for junior.
-
 Return ONLY valid JSON:
 {{
-  "score": 7,
+    "relevance_score": 3,
+    "correctness_score": 3,
+    "completeness_score": 2,
+    "score": 8,
   "feedback": "2 sentence explanation of score",
   "strengths": "what was good",
   "weaknesses": "what was missing",
@@ -41,10 +59,29 @@ Return ONLY the JSON. No explanation.
         if raw.startswith("json"):
             raw = raw[4:]
     try:
-        return json.loads(raw.strip())
+        parsed = json.loads(raw.strip())
+        relevance = int(parsed.get("relevance_score", 0) or 0)
+        correctness = int(parsed.get("correctness_score", 0) or 0)
+        completeness = int(parsed.get("completeness_score", 0) or 0)
+        score = int(parsed.get("score", relevance + correctness + completeness) or 0)
+
+        # Guardrail: prevent unrelated answers from getting inflated scores.
+        if relevance <= 1:
+            score = min(score, 3)
+        elif relevance == 2:
+            score = min(score, 5)
+
+        parsed["relevance_score"] = max(0, min(4, relevance))
+        parsed["correctness_score"] = max(0, min(4, correctness))
+        parsed["completeness_score"] = max(0, min(2, completeness))
+        parsed["score"] = max(0, min(10, score))
+        return parsed
     except Exception:
         return {
-            "score": 5,
+            "relevance_score": 0,
+            "correctness_score": 0,
+            "completeness_score": 0,
+            "score": 0,
             "feedback": "Could not evaluate",
             "strengths": "",
             "weaknesses": "",
