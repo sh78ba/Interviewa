@@ -81,150 +81,155 @@ export default function NewInterview() {
   return (
     <>
       <Navbar />
-      <main style={{ maxWidth: 600, margin: "0 auto", padding: "48px 24px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8 }}>
-          New interview
-        </h1>
-        <p style={{ color: "#777", fontSize: 14, marginBottom: 40 }}>
-          Configure your practice session
-        </p>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-          <div>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                display: "block",
-                marginBottom: 12,
-              }}
+      <main className="page-container" style={{ paddingTop: 24 }}>
+        <section className="hero-section" style={{ alignItems: "start" }}>
+          <div
+            className="surface"
+            style={{ padding: 32, position: "sticky", top: 92 }}
+          >
+            <span className="page-kicker">Interview setup</span>
+            <h1
+              className="page-title"
+              style={{ fontSize: "clamp(34px, 4vw, 52px)", marginTop: 18 }}
             >
-              Role
-            </label>
-            {select(role, ROLES, setRole)}
-          </div>
-
-          <div>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                display: "block",
-                marginBottom: 12,
-              }}
+              Build the round you actually want to practice.
+            </h1>
+            <p
+              className="page-subtitle"
+              style={{ fontSize: 16, marginTop: 16 }}
             >
-              Experience level
-            </label>
-            {select(level, LEVELS, setLevel)}
-          </div>
+              Choose your role, difficulty, and rounds. Add a resume or job
+              description if you want the interviewer to be more specific.
+            </p>
 
-          <div>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                display: "block",
-                marginBottom: 12,
-              }}
-            >
-              Rounds
-            </label>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {ROUNDS.map((r) => (
-                <button
-                  key={r.key}
-                  onClick={() => toggleRound(r.key)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    cursor: "pointer",
-                    border: selectedRounds.includes(r.key)
-                      ? "2px solid #111"
-                      : "1px solid #ddd",
-                    background: selectedRounds.includes(r.key)
-                      ? "#111"
-                      : "#fff",
-                    color: selectedRounds.includes(r.key) ? "#fff" : "#333",
-                    fontWeight: selectedRounds.includes(r.key) ? 500 : 400,
-                  }}
+            <div className="stack" style={{ marginTop: 24 }}>
+              {[
+                ["Role-aware", "Frontend, backend, fullstack, devops, or ML."],
+                [
+                  "Round-based",
+                  "Mix and match resume, technical, system design, and HR.",
+                ],
+                [
+                  "Interview memory",
+                  "Final report is saved after the round ends.",
+                ],
+              ].map(([title, body]) => (
+                <div
+                  key={title}
+                  className="surface-strong card-hover"
+                  style={{ padding: 16 }}
                 >
-                  {r.label}
-                </button>
+                  <div
+                    style={{ fontSize: 14, fontWeight: 650, marginBottom: 6 }}
+                  >
+                    {title}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--muted)",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {body}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
 
-          <div>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Resume{" "}
-              <span style={{ color: "#999", fontWeight: 400 }}>(optional)</span>
-            </label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setResume(e.target.files?.[0] || null)}
-              style={{ fontSize: 13, color: "#555" }}
-            />
+          <div className="surface" style={{ padding: 32 }}>
+            <div style={{ marginBottom: 24 }}>
+              <div
+                style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}
+              >
+                Configure your practice session
+              </div>
+              <h2 className="section-title">New interview</h2>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+              <div>
+                <label className="field-label">Role</label>
+                {select(role, ROLES, setRole)}
+              </div>
+
+              <div>
+                <label className="field-label">Experience level</label>
+                {select(level, LEVELS, setLevel)}
+              </div>
+
+              <div>
+                <label className="field-label">Rounds</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {ROUNDS.map((r) => (
+                    <button
+                      key={r.key}
+                      onClick={() => toggleRound(r.key)}
+                      className={
+                        selectedRounds.includes(r.key)
+                          ? "button-primary"
+                          : "button-secondary"
+                      }
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 999,
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="field-label">
+                  Resume{" "}
+                  <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setResume(e.target.files?.[0] || null)}
+                  style={{ fontSize: 13, color: "var(--muted)" }}
+                />
+              </div>
+
+              <div>
+                <label className="field-label">
+                  Job description{" "}
+                  <span style={{ color: "var(--muted)", fontWeight: 400 }}>
+                    (optional)
+                  </span>
+                </label>
+                <textarea
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  rows={5}
+                  placeholder="Paste the job description here..."
+                  className="textarea"
+                />
+              </div>
+
+              {error && (
+                <p style={{ color: "#b91c1c", fontSize: 13 }}>{error}</p>
+              )}
+
+              <button
+                onClick={submit}
+                disabled={loading}
+                className="button-primary"
+                style={{ width: "100%" }}
+              >
+                {loading ? "Setting up interview..." : "Start interview"}
+              </button>
+            </div>
           </div>
-
-          <div>
-            <label
-              style={{
-                fontSize: 13,
-                fontWeight: 500,
-                display: "block",
-                marginBottom: 8,
-              }}
-            >
-              Job description{" "}
-              <span style={{ color: "#999", fontWeight: 400 }}>(optional)</span>
-            </label>
-            <textarea
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              rows={4}
-              placeholder="Paste the job description here..."
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                fontSize: 14,
-                resize: "vertical",
-                outline: "none",
-                fontFamily: "inherit",
-              }}
-            />
-          </div>
-
-          {error && <p style={{ color: "#e00", fontSize: 13 }}>{error}</p>}
-
-          <button
-            onClick={submit}
-            disabled={loading}
-            style={{
-              background: "#111",
-              color: "#fff",
-              padding: "14px",
-              borderRadius: 8,
-              border: "none",
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {loading ? "Setting up interview..." : "Start interview"}
-          </button>
-        </div>
+        </section>
       </main>
     </>
   );

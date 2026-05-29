@@ -12,51 +12,47 @@ export default function Navbar() {
   };
 
   return (
-    <nav
-      style={{
-        borderBottom: "1px solid #eeeeee",
-        padding: "0 32px",
-        height: 56,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        position: "sticky",
-        top: 0,
-        background: "#ffffff",
-        zIndex: 100,
-      }}
-    >
-      <Link
-        href="/dashboard"
-        style={{
-          fontWeight: 600,
-          fontSize: 18,
-          color: "#111",
-          textDecoration: "none",
-        }}
-      >
-        Interviewa
-      </Link>
-      <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+    <div className="nav-shell">
+      <nav className="nav-inner">
         <Link
           href="/dashboard"
-          style={{ fontSize: 14, color: "#555", textDecoration: "none" }}
-        >
-          Dashboard
-        </Link>
-        <button
-          onClick={logout}
           style={{
-            fontSize: 14,
-            color: "#555",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            textDecoration: "none",
           }}
         >
-          Logout
-        </button>
-      </div>
-    </nav>
+          <span className="brand-mark">I</span>
+          <div>
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Interviewa
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+              interview practice studio
+            </div>
+          </div>
+        </Link>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Link
+            href="/dashboard"
+            className="button-subtle"
+            style={{ textDecoration: "none" }}
+          >
+            Dashboard
+          </Link>
+          <button onClick={logout} className="button-secondary">
+            Logout
+          </button>
+        </div>
+      </nav>
+    </div>
   );
 }
