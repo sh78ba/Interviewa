@@ -2,8 +2,6 @@
 
 This file shows how to set up and start the project locally.
 
-For the architecture and request flow, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
 ## Prerequisites
 
 - Python 3.11+
@@ -41,6 +39,16 @@ python3.11 -m pip install -r requirements.txt
 cd frontend
 npm install
 ```
+
+## Colab Notebook (optional)
+
+If you want to run the AI service in Google Colab (recommended for quick GPU access), open [Inverviewa.ipynb](Inverviewa.ipynb) in Colab and follow the cells. Recommended runtime: GPU (T4).
+
+When the notebook creates a public URL it will print a line like:
+
+`AI_SERVICE_URL=https://...`
+
+Copy that `AI_SERVICE_URL` value into your backend `.env` as `AI_SERVICE_URL` (or `ai_service_url`) before starting the backend. If the Colab runtime restarts the URL will change — re-run the notebook and copy the new value.
 
 ## Start the Project
 
