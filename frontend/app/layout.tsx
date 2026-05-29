@@ -5,6 +5,9 @@ import UnhandledRejectionSuppressor from "@/components/UnhandledRejectionSuppres
 export const metadata: Metadata = {
   title: "Interviewa — AI Interview Practice",
   description: "Practice technical interviews with AI",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

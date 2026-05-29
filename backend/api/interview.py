@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, delete
 from pydantic import BaseModel
 from typing import Optional
 import os, shutil, uuid
@@ -265,23 +265,69 @@ async def get_report(
 # ── List interviews ───────────────────────────────────────────────────────────
 @router.get("/")
 async def list_interviews(
+    page: int = 1,
+    limit: int = 5,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user)
+):
+    page = max(page, 1)
+    limit = max(min(limit, 20), 1)
+
+    total_result = await db.execute(
+        select(func.count())
+        .select_from(Interview)
+        .where(Interview.user_id == user_id)
+    )
+    total = total_result.scalar_one() or 0
+
+    result = await db.execute(
+        select(Interview)
+        .where(Interview.user_id == user_id)
+        .order_by(Interview.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    interviews = result.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": i.id,
+                "role": i.role,
+                "level": i.level,
+                "status": i.status,
+                "rounds": i.rounds,
+                "created_at": str(i.created_at)
+            }
+            for i in interviews
+        ],
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": max((total + limit - 1) // limit, 1) if total else 0
+    }
+
+
+# ── Delete interview ────────────────────────────────────────────────────────
+@router.delete("/{interview_id}")
+async def delete_interview(
+    interview_id: str,
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user)
 ):
     result = await db.execute(
         select(Interview)
+        .where(Interview.id == interview_id)
         .where(Interview.user_id == user_id)
-        .order_by(Interview.created_at.desc())
     )
-    interviews = result.scalars().all()
-    return [
-        {
-            "id": i.id,
-            "role": i.role,
-            "level": i.level,
-            "status": i.status,
-            "rounds": i.rounds,
-            "created_at": str(i.created_at)
-        }
-        for i in interviews
-    ]
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(404, "Interview not found")
+
+    await db.execute(delete(Answer).where(Answer.interview_id == interview_id))
+    await db.execute(delete(Question).where(Question.interview_id == interview_id))
+    await db.execute(delete(Report).where(Report.interview_id == interview_id))
+    await db.execute(delete(Interview).where(Interview.id == interview_id))
+    await db.commit()
+
+    return {"message": "Interview deleted"}

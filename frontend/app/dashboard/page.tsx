@@ -15,6 +15,14 @@ interface Interview {
   created_at: string;
 }
 
+interface InterviewListResponse {
+  items: Interview[];
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+}
+
 const statusColor: Record<string, string> = {
   completed: "#16a34a",
   in_progress: "#ca8a04",
@@ -25,17 +33,64 @@ export default function Dashboard() {
   const router = useRouter();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const loadInterviews = async (nextPage = page) => {
+    try {
+      setLoading(true);
+      setError("");
+      const r = await api.get<InterviewListResponse>("/api/interview/", {
+        params: { page: nextPage, limit: 5 },
+      });
+      setInterviews(r.data.items || []);
+      setPage(r.data.page || nextPage);
+      setTotalPages(r.data.total_pages || 0);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Failed to load interviews",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isLoggedIn()) {
       router.push("/login");
       return;
     }
-    api.get("/api/interview/").then((r) => {
-      setInterviews(r.data);
-      setLoading(false);
-    });
-  }, []);
+    void loadInterviews(page);
+  }, [page, router]);
+
+  const deleteInterview = async (id: string) => {
+    const confirmed = window.confirm(
+      "Delete this interview? This will remove the interview, answers, questions, and report.",
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingId(id);
+      await api.delete(`/api/interview/${id}`);
+      if (interviews.length === 1 && page > 1) {
+        setPage((p) => p - 1);
+      } else {
+        await loadInterviews(page);
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.detail ||
+          err?.message ||
+          "Failed to delete interview",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <>
@@ -75,6 +130,19 @@ export default function Dashboard() {
 
         {loading ? (
           <p style={{ color: "#777", fontSize: 14 }}>Loading...</p>
+        ) : error ? (
+          <div
+            style={{
+              padding: 20,
+              border: "1px solid #f1caca",
+              background: "#fff7f7",
+              borderRadius: 12,
+              color: "#8a1f1f",
+              fontSize: 14,
+            }}
+          >
+            {error}
+          </div>
         ) : interviews.length === 0 ? (
           <div
             style={{
@@ -151,7 +219,7 @@ export default function Dashboard() {
                     {new Date(iv.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                   {iv.status !== "completed" && (
                     <Link
                       href={`/interview/${iv.id}`}
@@ -182,9 +250,73 @@ export default function Dashboard() {
                       View report
                     </Link>
                   )}
+                  <button
+                    onClick={() => void deleteInterview(iv.id)}
+                    disabled={deletingId === iv.id}
+                    style={{
+                      border: "1px solid #f1caca",
+                      color: "#b91c1c",
+                      background: "#fff",
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      cursor: deletingId === iv.id ? "not-allowed" : "pointer",
+                      opacity: deletingId === iv.id ? 0.6 : 1,
+                    }}
+                  >
+                    {deletingId === iv.id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && !error && totalPages > 1 && (
+          <div
+            style={{
+              marginTop: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page <= 1}
+              style={{
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                padding: "10px 16px",
+                borderRadius: 8,
+                cursor: page <= 1 ? "not-allowed" : "pointer",
+                opacity: page <= 1 ? 0.5 : 1,
+              }}
+            >
+              Previous
+            </button>
+
+            <p style={{ fontSize: 14, color: "#777" }}>
+              Page {page} of {totalPages}
+            </p>
+
+            <button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page >= totalPages}
+              style={{
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                padding: "10px 16px",
+                borderRadius: 8,
+                cursor: page >= totalPages ? "not-allowed" : "pointer",
+                opacity: page >= totalPages ? 0.5 : 1,
+              }}
+            >
+              Next
+            </button>
           </div>
         )}
       </main>
