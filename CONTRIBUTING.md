@@ -22,6 +22,10 @@ Review & CI
 
 - Pull requests will be reviewed and merged once they meet quality and compatibility standards.
 
+Contributor License Agreement
+
+- By submitting a contribution, you agree to the terms in `CLA.md`.
+
 Contact
 
 - If you need help, open an issue and tag maintainers.

@@ -9,7 +9,12 @@ Quick links
 
 License
 
-- This project is released under the MIT License. See the `LICENSE` file for details.
+- This project is released under the GNU Affero General Public License v3.0 or later. See the `LICENSE` file for details.
+- Personal self-hosted use is allowed, but if you modify and deploy the app for network use, the AGPLv3 source-sharing terms apply.
+
+Contributor Agreement
+
+- Contributions are accepted under the project CLA policy in `CLA.md`.
 
 Contributing
 
