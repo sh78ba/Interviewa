@@ -1,4 +1,6 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     ai_service_url: str
@@ -13,7 +15,10 @@ class Settings(BaseSettings):
     chroma_port: int = 8001
 
     class Config:
-        env_file = "../.env"
+        # Resolve backend/.env relative to this file so settings load
+        # correctly regardless of the current working directory.
+        env_file = str((Path(__file__).resolve().parent.parent / ".env"))
         extra = "allow"
+
 
 settings = Settings()

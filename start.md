@@ -7,7 +7,7 @@ This file shows how to set up and start the project locally.
 - Python 3.11+
 - Node.js 18+
 - npm
-- A `.env` file at the repo root with the required backend settings
+- A `backend/.env` file with the required backend settings (see `backend/.env.example`)
 
 ## Required Environment Variables
 
