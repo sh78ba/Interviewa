@@ -102,11 +102,3 @@ Use `Inverviewa.ipynb` in Google Colab (T4 recommended). After execution, copy t
 ## Contributing
 
 See `CONTRIBUTING.md` for contribution workflow and guidelines.
-
-## Community
-
-Discord link can be added here when your server is ready.
-
----
-
-If you want, I can also add a matching GitHub profile banner image and badge row for release/version once you publish tags.
