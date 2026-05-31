@@ -1,28 +1,112 @@
+<div align="center">
+
+<img src="frontend/app/icon.svg" alt="Interviewa logo" width="88" height="88" />
+
 # Interviewa
 
-Interviewa is an open-source interview practice platform combining backend services and a Next.js frontend. This repository contains the full-stack project used to run Interviewa locally and deploy it to platforms that support Python and Next.js.
+### Build Your Own AI Interview Practice Platform
 
-Quick links
+Open-source full-stack interview simulation with voice, coding rounds, resume-aware questioning, and AI-generated final reports.
 
-- Backend: `backend/`
-- Frontend: `frontend/`
+![Status](https://img.shields.io/badge/Status-Pre--Alpha-orange)
+![CI](https://img.shields.io/badge/CI-Not%20Configured-lightgrey)
+![License](https://img.shields.io/badge/License-AGPLv3-blue)
+![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20Next.js-111827)
 
-License
+[Quickstart](#quickstart) • [Features](#features) • [Project-Structure](#project-structure) • [Contributing](#contributing) • [Community](#community)
 
-- This project is released under the GNU Affero General Public License v3.0 or later. See the `LICENSE` file for details.
-- Personal self-hosted use is allowed, but if you modify and deploy the app for network use, the AGPLv3 source-sharing terms apply.
+</div>
 
-Contributor Agreement
+---
 
-- Contributions are accepted under the project CLA policy in `CLA.md`.
+## Why Interviewa
 
-Contributing
+Interviewa helps candidates and teams run realistic interview simulations on their own infrastructure.
 
-- See `CONTRIBUTING.md` for how to contribute, coding guidelines, and PR flow.
+- Run structured interview sessions end-to-end.
+- Generate targeted questions and evaluate responses.
+- Support voice-based interaction and coding rounds.
+- Produce final reports with actionable feedback.
+- Keep full control with self-hosting.
 
-Getting started (quick)
+## Features
 
-1. Backend: create a Python venv, install requirements in `backend/requirements.txt`, then run the app (see `backend/main.py`).
-2. Frontend: install dependencies in `frontend/` and run the Next.js dev server.
+- AI-powered question generation and answer evaluation
+- Resume-aware retrieval pipeline (with optional ChromaDB)
+- Voice flow (speech generation + transcription)
+- Coding and non-coding round support
+- Authenticated multi-user interview dashboard
+- Paginated interview history and deletion
+- Final performance report with scoring insights
 
-If you'd like, I can add more detailed setup steps tailored to your environment.
+## Quickstart
+
+### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- npm
+- `backend/.env` file (copy from `backend/.env.example`)
+
+### 1. Backend
+
+```bash
+cd backend
+python3.11 -m pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+Backend URL: `http://127.0.0.1:8000`
+
+### 2. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend URL: `http://localhost:3000`
+
+### Optional: Colab AI Service
+
+Use `Inverviewa.ipynb` in Google Colab (T4 recommended). After execution, copy the generated `AI_SERVICE_URL` into `backend/.env`.
+
+## Project Structure
+
+```text
+.
+|- backend/                 # FastAPI app, models, services, APIs
+|- frontend/                # Next.js app router frontend
+|- uploads/                 # Runtime uploads
+|- Inverviewa.ipynb         # Colab setup for AI service proxy
+|- start.md                 # Detailed local setup guide
+|- CONTRIBUTING.md          # Contribution workflow
+|- CLA.md                   # Contributor License Agreement (draft)
+`- LICENSE                  # Project license
+```
+
+## Tech Stack
+
+- Backend: FastAPI, SQLAlchemy, Pydantic Settings, Redis
+- Frontend: Next.js (App Router), React, TypeScript
+- AI/ML: LLM service integration, Whisper pipeline, optional ChromaDB
+- Infra: Self-host friendly architecture with Colab-assisted AI proxy option
+
+## Security and Licensing
+
+- License: GNU Affero General Public License v3.0 or later (`LICENSE`)
+- CLA policy: `CLA.md`
+- If modified versions are provided over a network, AGPL source-sharing obligations apply.
+
+## Contributing
+
+See `CONTRIBUTING.md` for contribution workflow and guidelines.
+
+## Community
+
+Discord link can be added here when your server is ready.
+
+---
+
+If you want, I can also add a matching GitHub profile banner image and badge row for release/version once you publish tags.
