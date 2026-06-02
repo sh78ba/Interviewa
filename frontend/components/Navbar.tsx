@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { LayoutDashboard, Compass } from "lucide-react";
 
 export default function Navbar() {
   return (
@@ -10,23 +11,27 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 12,
+            gap: 10,
             textDecoration: "none",
           }}
         >
-          <span className="brand-mark">I</span>
+          <span className="brand-mark">
+            I
+          </span>
           <div>
             <div
               style={{
+                fontFamily: "'Lora', Georgia, serif",
                 fontSize: 18,
-                fontWeight: 700,
-                letterSpacing: "-0.03em",
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+                color: "var(--text-strong)",
               }}
             >
               Interviewa
             </div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>
-              interview practice studio
+            <div style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              interview studio
             </div>
           </div>
         </Link>
@@ -34,9 +39,17 @@ export default function Navbar() {
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <Link
             href="/dashboard"
-            className="button-subtle"
-            style={{ textDecoration: "none" }}
+            className="button-secondary"
+            style={{ 
+              textDecoration: "none", 
+              display: "flex", 
+              gap: 6, 
+              padding: "6px 12px", 
+              fontSize: 12,
+              borderRadius: 4
+            }}
           >
+            <LayoutDashboard size={14} />
             Dashboard
           </Link>
         </div>

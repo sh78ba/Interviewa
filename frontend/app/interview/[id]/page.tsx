@@ -2,6 +2,10 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import api from "@/lib/api";
+import { 
+  Volume2, Mic, Play, Square, Award, Clock, ArrowLeft, 
+  CheckCircle, Activity, Info, Sparkles, Terminal, ChevronRight, AlertCircle
+} from "lucide-react";
 
 interface Question {
   question_id: string;
@@ -200,7 +204,7 @@ export default function InterviewRoom() {
     processAnswerRef.current = processAnswer;
   }, [fetchAndSpeak, startListening, processAnswer]);
 
-  // ── Stop recording and finalize the answer ───────────────────────────────
+  // ── Stop listening and finalize the answer ───────────────────────────────
   const stopListening = useCallback(() => {
     if (finalizedRef.current) return;
     finalizedRef.current = true;
@@ -260,13 +264,6 @@ export default function InterviewRoom() {
     void startListeningRef.current?.();
   };
 
-  // ── Visuals ───────────────────────────────────────────────────────────────
-  const diffColor: Record<string, string> = {
-    easy: "#16a34a",
-    medium: "#ca8a04",
-    hard: "#dc2626",
-  };
-
   if (phase === "done")
     return (
       <main
@@ -277,375 +274,396 @@ export default function InterviewRoom() {
           justifyContent: "center",
           flexDirection: "column",
           gap: 16,
+          background: "var(--bg)",
+          padding: 24
         }}
       >
-        <div style={{ fontSize: 48, marginBottom: 8 }}>🎉</div>
-        <h2 style={{ fontSize: 24, fontWeight: 600 }}>Interview complete</h2>
-        <p style={{ color: "#777", marginBottom: 16 }}>Your report is ready</p>
+        <div style={{ 
+          width: 80, 
+          height: 80, 
+          borderRadius: "50%", 
+          background: "var(--bg-soft)", 
+          border: "1px solid #111111", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center",
+          color: "var(--text-strong)",
+          fontSize: 32,
+          animation: "fadeIn 0.5s ease"
+        }}>
+          ✓
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 600, color: "var(--text-strong)", fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
+          Interview complete
+        </h2>
+        <p style={{ color: "var(--text)", fontSize: 14, textAlign: "center", maxWidth: 320, lineHeight: 1.6 }}>
+          All practice questions have been answered. Your scorecard is ready.
+        </p>
         <button
           onClick={() => router.push(`/interview/${id}/report`)}
-          style={{
-            background: "#111",
-            color: "#fff",
-            padding: "12px 28px",
-            borderRadius: 8,
-            border: "none",
-            fontSize: 15,
-            cursor: "pointer",
-          }}
+          className="button-primary"
+          style={{ padding: "12px 28px", fontSize: 13, marginTop: 8 }}
         >
-          View report
+          View report <ChevronRight size={16} />
         </button>
       </main>
     );
 
-  return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: "0 auto",
-        padding: "32px 24px",
-        minHeight: "100vh",
-      }}
-    >
-      {/* Top bar */}
+  const sidebarContent = (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {/* HUD Bar */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 32,
+          paddingBottom: 14,
+          borderBottom: "1px solid var(--line)",
         }}
       >
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <span
-            style={{ fontSize: 13, color: "#777", textTransform: "capitalize" }}
+            className="chip"
+            style={{ fontSize: 10, textTransform: "capitalize", padding: "3px 8px", borderRadius: 3 }}
           >
-            {question?.round || "—"}
+            <span style={{ fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>{question?.round.replace("_", " ") || "—"}</span>
           </span>
           {question?.difficulty && (
-            <>
-              <span style={{ color: "#ddd" }}>·</span>
-              <span
-                style={{ fontSize: 13, color: diffColor[question.difficulty] }}
-              >
-                {question.difficulty}
-              </span>
-            </>
-          )}
-          {question?.topic && (
-            <>
-              <span style={{ color: "#ddd" }}>·</span>
-              <span style={{ fontSize: 13, color: "#777" }}>
-                {question.topic}
-              </span>
-            </>
+            <span
+              style={{ 
+                fontSize: 10, 
+                color: "#111", 
+                background: "var(--bg-soft)",
+                border: "1px solid var(--line)",
+                padding: "3px 8px",
+                borderRadius: 3,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em"
+              }}
+            >
+              {question.difficulty}
+            </span>
           )}
         </div>
-        <span style={{ fontSize: 13, color: "#777" }}>
+        <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
           {question?.progress || "—"}
         </span>
       </div>
 
-      {/* AI Avatar */}
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
+      {/* AI Interviewer Avatar Panel */}
+      <div className="surface" style={{ padding: 20, textAlign: "center", borderRadius: 8 }}>
         <div
           style={{
-            width: 80,
-            height: 80,
+            width: 56,
+            height: 56,
             borderRadius: "50%",
-            background: "#111",
+            background: "var(--bg-soft)",
+            border: `1.5px solid ${phase === "ai_speaking" || phase === "listening" ? "#111111" : "var(--line)"}`,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 32,
-            marginBottom: 12,
-            boxShadow:
-              phase === "ai_speaking"
-                ? "0 0 0 6px #e5e5e5, 0 0 0 12px #f0f0f0"
-                : "none",
-            transition: "box-shadow 0.3s ease",
+            fontSize: 20,
+            marginBottom: 10,
+            transition: "all 0.2s ease",
           }}
         >
-          🤖
+          {phase === "listening" ? (
+            <Mic size={18} color="#111111" />
+          ) : phase === "ai_speaking" ? (
+            <Volume2 size={18} color="#111111" />
+          ) : (
+            <Activity size={18} color="var(--muted)" />
+          )}
         </div>
-        <p style={{ fontSize: 14, color: "#555", fontWeight: 500 }}>
+        
+        <p style={{ fontSize: 13, color: "var(--text-strong)", fontWeight: 700 }}>
           {statusText}
         </p>
-        <p style={{ fontSize: 12, color: "#777", marginTop: 8 }}>
-          Note: The AI preloads model answers for each question and compares
-          your responses to them. Interim scores are hidden — your final score
-          and detailed report will be shown after completing the interview.
-        </p>
+
+        {/* Audio Wave Visualizer Simulation */}
+        <div style={{ marginTop: 12 }}>
+          <div className="audio-visualizer">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div 
+                key={i} 
+                className="wave-bar" 
+                style={{ 
+                  animationPlayState: (phase === "ai_speaking" || phase === "listening") ? "running" : "paused",
+                  opacity: (phase === "ai_speaking" || phase === "listening") ? 1 : 0.2,
+                  height: (phase === "ai_speaking" || phase === "listening") ? undefined : "4px",
+                  background: "#111"
+                }} 
+              />
+            ))}
+          </div>
+        </div>
+
+        <div style={{ 
+          marginTop: 14, 
+          display: "flex", 
+          gap: 6, 
+          alignItems: "center", 
+          justifyContent: "center",
+          background: "var(--bg-soft)",
+          padding: "8px 12px",
+          borderRadius: 4,
+          border: "1px solid var(--line)"
+        }}>
+          <Info size={12} color="var(--muted)" style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: 10, color: "var(--muted)", textAlign: "left", lineHeight: 1.4 }}>
+            Interim feedback is stored silently. The final scorecard appears upon session completion.
+          </p>
+        </div>
       </div>
 
-      {/* Question card */}
+      {/* Question Card */}
       {question && (
         <div
+          className="surface-strong"
           style={{
-            background: "#f9f9f9",
-            borderRadius: 12,
-            padding: 24,
-            marginBottom: 24,
-            borderLeft: "3px solid #111",
+            padding: 20,
+            borderLeft: "2px solid #111111",
+            background: "var(--bg-soft)",
+            borderRadius: 6
           }}
         >
-          <p style={{ fontSize: 16, lineHeight: 1.7, color: "#222" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+            Question {question.question_number}
+          </div>
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--text-strong)", fontWeight: 500 }}>
             {question.question}
           </p>
         </div>
       )}
 
-      {/* Transcript */}
+      {/* Audio Transcript (if speech is detected) */}
       {transcript && (
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <p
+        <div className="surface" style={{ padding: 16, borderRadius: 8 }}>
+          <div
             style={{
-              fontSize: 12,
-              color: "#777",
-              marginBottom: 8,
-              fontWeight: 500,
+              fontSize: 10,
+              color: "var(--muted)",
+              marginBottom: 6,
+              fontWeight: 700,
+              letterSpacing: "0.04em"
             }}
           >
-            YOUR ANSWER
-          </p>
-          <p style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }}>
+            SPOKEN TRANSCRIPT
+          </div>
+          <p style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>
             {transcript}
           </p>
         </div>
       )}
 
-      {/* Code editor */}
-      {question?.is_coding && (
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            marginBottom: 20,
-          }}
-        >
-          <div
-            style={{
-              background: "#f5f5f5",
-              padding: "8px 16px",
-              fontSize: 12,
-              color: "#777",
-              borderBottom: "1px solid #eee",
-            }}
-          >
-            Code box
-          </div>
-          <textarea
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            spellCheck={false}
-            style={{
-              width: "100%",
-              minHeight: 280,
-              border: "none",
-              outline: "none",
-              padding: 16,
-              fontFamily:
-                'ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-              fontSize: 14,
-              lineHeight: 1.6,
-              resize: "vertical",
-              boxSizing: "border-box",
-            }}
-            placeholder="Write your code here..."
-          />
-        </div>
-      )}
-
-      {/* Feedback card */}
-      {feedback && (
-        <div
-          style={{
-            border: "1px solid #eee",
-            borderRadius: 12,
-            overflow: "hidden",
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              padding: "14px 20px",
-              background: "#f9f9f9",
-              borderBottom: "1px solid #eee",
-              display: "flex",
-              justifyContent: "space-between",
-            }}
-          >
-            <span style={{ fontWeight: 500, fontSize: 14 }}>Feedback</span>
-            <span
-              style={{
-                fontSize: 18,
-                fontWeight: 700,
-                color:
-                  feedback.score >= 7
-                    ? "#16a34a"
-                    : feedback.score >= 5
-                      ? "#ca8a04"
-                      : "#dc2626",
-              }}
-            >
-              {feedback.score}/10
-            </span>
-          </div>
-          <div
-            style={{
-              padding: 20,
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-            }}
-          >
-            <p style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }}>
-              {feedback.feedback}
-            </p>
-            {feedback.strengths && (
-              <div>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "#16a34a",
-                    marginBottom: 4,
-                  }}
-                >
-                  STRENGTHS
-                </p>
-                <p style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>
-                  {feedback.strengths}
-                </p>
-              </div>
-            )}
-            {feedback.weaknesses && (
-              <div>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "#dc2626",
-                    marginBottom: 4,
-                  }}
-                >
-                  TO IMPROVE
-                </p>
-                <p style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>
-                  {feedback.weaknesses}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Action buttons */}
+      {/* Live Actions */}
       <div
         style={{
           display: "flex",
-          gap: 12,
+          gap: 10,
           justifyContent: "center",
-          marginTop: 8,
+          marginTop: 6,
         }}
       >
-        {/* Interrupt AI */}
+        {/* Interrupt AI speaking */}
         {phase === "ai_speaking" && (
           <button
             onClick={interrupt}
-            style={{
-              background: "#fff",
-              border: "1px solid #ddd",
-              color: "#333",
-              padding: "12px 24px",
-              borderRadius: 8,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
+            className="button-secondary"
+            style={{ width: "100%", padding: "10px 16px" }}
           >
             Skip — start answering
           </button>
         )}
 
-        {/* Mic button */}
+        {/* Done answering voice */}
         {phase === "listening" && (
           <button
             onClick={stopListening}
+            className="button-primary"
             style={{
-              background: "#e00",
-              color: "#fff",
-              border: "none",
-              padding: "14px 32px",
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
+              width: "100%",
+              padding: "12px 18px",
+              background: "#111",
+              color: "white",
             }}
           >
-            <span style={{ animation: "pulse 1s infinite" }}>⏹</span> Done
-            answering
+            <Square size={12} fill="white" /> Done answering
           </button>
         )}
 
-        {/* Coding submit */}
+        {/* Submitting Code */}
         {question?.is_coding && phase === "feedback" && !feedback && (
           <button
             onClick={submitCoding}
-            style={{
-              background: "#111",
-              color: "#fff",
-              border: "none",
-              padding: "12px 28px",
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
+            className="button-primary"
+            style={{ width: "100%", padding: "10px 16px" }}
           >
             Submit solution
           </button>
         )}
 
-        {/* Processing indicator */}
+        {/* Loading/evaluating spinners */}
         {phase === "processing" && (
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: 8,
-              color: "#777",
-              fontSize: 14,
+              color: "var(--text)",
+              fontSize: 12,
+              background: "var(--bg-soft)",
+              padding: "8px 16px",
+              borderRadius: 6,
+              border: "1px solid var(--line)"
             }}
           >
             <div
               style={{
-                width: 16,
-                height: 16,
-                border: "2px solid #ddd",
-                borderTopColor: "#111",
+                width: 12,
+                height: 12,
+                border: "2px solid var(--line)",
+                borderTopColor: "var(--accent-strong)",
                 borderRadius: "50%",
                 animation: "spin 0.8s linear infinite",
               }}
             />
-            Processing...
+            <span>Processing...</span>
           </div>
         )}
       </div>
+    </div>
+  );
+
+  return (
+    <main
+      style={{
+        background: "var(--bg-soft)",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      {/* Immersive Room Header */}
+      <div 
+        style={{ 
+          height: 56, 
+          background: "var(--bg)", 
+          borderBottom: "1px solid var(--line)",
+          display: "flex", 
+          alignItems: "center", 
+          padding: "0 24px",
+          justifyContent: "space-between"
+        }}
+      >
+        <button 
+          onClick={() => {
+            const leave = window.confirm("Exit the studio? Current answer states will be stored.");
+            if (leave) router.push("/dashboard");
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text)", fontWeight: 600 }}
+        >
+          <ArrowLeft size={14} /> Exit studio
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#111" }} />
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: "var(--text-strong)", textTransform: "uppercase" }}>
+            Live studio session
+          </span>
+        </div>
+      </div>
+
+      {question?.is_coding ? (
+        /* GRID 2 COLUMNS (Question on Left, Code Editor on Right) */
+        <div 
+          style={{ 
+            flex: 1, 
+            display: "grid", 
+            gridTemplateColumns: "360px 1fr",
+            height: "calc(100vh - 56px)"
+          }}
+          className="studio-split"
+        >
+          {/* Left panel - scrollable */}
+          <div 
+            style={{ 
+              background: "var(--bg)", 
+              borderRight: "1px solid var(--line)",
+              padding: 20,
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%"
+            }}
+          >
+            {sidebarContent}
+          </div>
+
+          {/* Right panel - code editor */}
+          <div style={{ padding: 20, overflowY: "auto", background: "var(--bg-soft)", height: "100%" }}>
+            <div className="ide-wrapper" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+              <div className="ide-header">
+                <div className="ide-tabs">
+                  <div className="ide-tab">
+                    <Terminal size={12} color="#111" />
+                    <span>solution.js</span>
+                  </div>
+                </div>
+                <div style={{ fontSize: 10, color: "var(--muted)", fontFamily: "monospace" }}>
+                  JavaScript (ES6)
+                </div>
+              </div>
+              <div className="ide-editor" style={{ flex: 1, display: "flex", minHeight: 300 }}>
+                <div className="ide-gutter">
+                  {Array.from({ length: 22 }).map((_, i) => (
+                    <div key={i}>{i + 1}</div>
+                  ))}
+                </div>
+                <textarea
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  spellCheck={false}
+                  className="ide-textarea"
+                  style={{ height: "100%", minHeight: "100%" }}
+                  placeholder="Write your solution code here..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* CENTER SINGLE COLUMN (Voice or text only) */
+        <div 
+          style={{ 
+            flex: 1, 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            padding: "32px 24px"
+          }}
+        >
+          <div className="surface" style={{ width: "100%", maxWidth: 580, padding: 24, borderRadius: 8 }}>
+            {sidebarContent}
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        @media (max-width: 900px) {
+          .studio-split {
+            grid-template-columns: 1fr !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .studio-split > div {
+            height: auto !important;
+            overflow: visible !important;
+            border-right: none !important;
+          }
+        }
       `}</style>
     </main>
   );

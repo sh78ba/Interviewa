@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
+import { 
+  Plus, Calendar, Clock, CheckCircle, HelpCircle, 
+  Trash2, Play, FileText, ChevronRight, AlertCircle, Sparkles, Layers 
+} from "lucide-react";
 
 interface Interview {
   id: string;
@@ -22,9 +26,15 @@ interface InterviewListResponse {
 }
 
 const statusColor: Record<string, string> = {
-  completed: "#16a34a",
-  in_progress: "#ca8a04",
-  pending: "#6b7280",
+  completed: "#111111",
+  in_progress: "#737373",
+  pending: "#a3a3a3",
+};
+
+const statusBg: Record<string, string> = {
+  completed: "#f5f5f5",
+  in_progress: "#fafafa",
+  pending: "#ffffff",
 };
 
 export default function Dashboard() {
@@ -72,7 +82,7 @@ export default function Dashboard() {
 
   const deleteInterview = async (id: string) => {
     const confirmed = window.confirm(
-      "Delete this interview? This will remove the interview, answers, questions, and report.",
+      "Delete this interview? This will permanently remove the interview session.",
     );
     if (!confirmed) return;
 
@@ -98,8 +108,9 @@ export default function Dashboard() {
   return (
     <>
       <Navbar />
-      <main className="page-container">
-        <section className="surface" style={{ padding: 28, marginBottom: 20 }}>
+      <main className="page-container" style={{ paddingTop: 32 }}>
+        {/* Workspace HUD */}
+        <section className="surface" style={{ padding: 28, marginBottom: 20, borderRadius: 8 }}>
           <div
             style={{
               display: "flex",
@@ -110,89 +121,115 @@ export default function Dashboard() {
             }}
           >
             <div style={{ maxWidth: 720 }}>
-              <span className="page-kicker">Your workspace</span>
+              <span className="page-kicker">Workspace overview</span>
               <h1
                 className="page-title"
-                style={{ fontSize: "clamp(32px, 4vw, 50px)", marginTop: 14 }}
+                style={{ fontSize: "clamp(26px, 3.5vw, 38px)", marginTop: 10 }}
               >
-                Keep track of every mock interview in one place.
+                Keep track of every mock <span>interview in one place</span>.
               </h1>
               <p
                 className="page-subtitle"
-                style={{ fontSize: 16, marginTop: 12 }}
+                style={{ fontSize: 14, marginTop: 8, lineHeight: 1.6 }}
               >
-                Review active sessions, open final reports, or clear out old
-                practice runs when you’re done.
+                Review active sessions, inspect evaluation reports, or clear out previous runs.
               </p>
             </div>
 
-            <Link href="/interview/new" className="button-primary">
-              + New interview
+            <Link href="/interview/new" className="button-primary" style={{ padding: "10px 16px" }}>
+              <Plus size={14} /> New interview
             </Link>
           </div>
 
           <div className="stat-grid" style={{ marginTop: 24 }}>
             {[
-              ["Total sessions", interviews.length.toString()],
-              ["In progress", activeCount.toString()],
-              ["Completed", completedCount.toString()],
-              ["Pending", pendingCount.toString()],
-            ].map(([label, value]) => (
-              <div key={label} className="surface-strong stat-card card-hover">
-                <div className="stat-value">{value}</div>
-                <div className="stat-label">{label}</div>
+              { label: "Total sessions", value: interviews.length.toString(), icon: <Layers size={16} color="#777" /> },
+              { label: "In progress", value: activeCount.toString(), icon: <Clock size={16} color="#777" /> },
+              { label: "Completed", value: completedCount.toString(), icon: <CheckCircle size={16} color="#777" /> },
+              { label: "Pending", value: pendingCount.toString(), icon: <HelpCircle size={16} color="#777" /> },
+            ].map((stat) => (
+              <div key={stat.label} className="surface-strong stat-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderRadius: 6, border: "1px solid var(--line)" }}>
+                <div>
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-label" style={{ fontSize: 11, fontWeight: 700 }}>{stat.label}</div>
+                </div>
+                <div style={{ background: "rgba(0,0,0,0.02)", padding: 6, borderRadius: 4 }}>
+                  {stat.icon}
+                </div>
               </div>
             ))}
           </div>
         </section>
 
         {loading ? (
-          <p className="muted" style={{ fontSize: 14 }}>
-            Loading...
-          </p>
+          <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
+            <div
+              style={{
+                width: 20,
+                height: 20,
+                border: "2px solid var(--line)",
+                borderTopColor: "var(--accent-strong)",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+              }}
+            />
+            <span style={{ marginLeft: 10, color: "var(--muted)", fontSize: 13 }}>Loading...</span>
+          </div>
         ) : error ? (
           <div
             style={{
-              padding: 20,
-              border: "1px solid #f1caca",
-              background: "#fff7f7",
-              borderRadius: 12,
-              color: "#8a1f1f",
-              fontSize: 14,
+              padding: "12px 16px",
+              border: "1px solid var(--accent-strong)",
+              background: "var(--bg-soft)",
+              borderRadius: 6,
+              color: "var(--text-strong)",
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 20
             }}
           >
-            {error}
+            <AlertCircle size={16} />
+            <span>{error}</span>
           </div>
         ) : interviews.length === 0 ? (
           <div
             style={{
               textAlign: "center",
-              padding: "72px 24px",
+              padding: "64px 24px",
+              borderRadius: 8
             }}
             className="surface"
           >
-            <p className="muted" style={{ fontSize: 15, marginBottom: 20 }}>
+            <Sparkles size={28} color="#777" style={{ marginBottom: 12, opacity: 0.8 }} />
+            <p style={{ fontSize: 14, color: "var(--text-strong)", fontWeight: 700, marginBottom: 4 }}>
               No interviews yet
+            </p>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 18, maxWidth: "360px", margin: "0 auto 18px auto" }}>
+              Configure your targeted role and experience level, upload a PDF resume, and start practicing.
             </p>
             <Link href="/interview/new" className="button-primary">
               Start your first interview
             </Link>
           </div>
         ) : (
-          <div className="stack">
+          <div className="stack" style={{ gap: 10 }}>
             {interviews.map((iv) => (
               <div
                 key={iv.id}
                 className="surface card-hover"
                 style={{
-                  padding: 22,
+                  padding: "16px 20px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 16,
+                  flexWrap: "wrap",
+                  borderRadius: 8
                 }}
               >
-                <div>
+                <div style={{ flex: 1, minWidth: "220px" }}>
                   <div
                     style={{
                       display: "flex",
@@ -203,59 +240,70 @@ export default function Dashboard() {
                   >
                     <span
                       style={{
-                        fontWeight: 500,
-                        fontSize: 16,
+                        fontWeight: 700,
+                        fontSize: 15,
                         textTransform: "capitalize",
-                        letterSpacing: "-0.02em",
+                        letterSpacing: "-0.01em",
+                        color: "var(--text-strong)"
                       }}
                     >
                       {iv.role} — {iv.level}
                     </span>
                     <span
                       style={{
-                        fontSize: 11,
-                        padding: "6px 10px",
-                        borderRadius: 20,
-                        background: "rgba(17,24,39,0.05)",
-                        color: statusColor[iv.status],
-                        fontWeight: 500,
+                        fontSize: 9,
+                        padding: "3px 8px",
+                        borderRadius: 3,
+                        background: statusBg[iv.status] || "#ffffff",
+                        color: statusColor[iv.status] || "var(--text)",
+                        fontWeight: 700,
                         textTransform: "uppercase",
-                        letterSpacing: "0.04em",
+                        letterSpacing: "0.05em",
+                        border: `1px solid var(--line)`
                       }}
                     >
                       {iv.status.replace("_", " ")}
                     </span>
                   </div>
-                  <p className="muted" style={{ fontSize: 13 }}>
-                    {iv.rounds.join(" · ")} ·{" "}
-                    {new Date(iv.created_at).toLocaleDateString()}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text)" }}>
+                      <Layers size={12} color="var(--muted)" />
+                      <span style={{ textTransform: "capitalize", fontStyle: "italic", fontFamily: "'Lora', Georgia, serif" }}>{iv.rounds.join(" · ").replace(/_/g, " ")}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--muted)" }}>
+                      <Calendar size={12} />
+                      <span>{new Date(iv.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+
+                {/* Operations */}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   {iv.status !== "completed" && (
                     <Link
                       href={`/interview/${iv.id}`}
-                      className="button-secondary"
+                      className="button-primary"
                       style={{
-                        textDecoration: "none",
-                        padding: "10px 14px",
-                        fontSize: 13,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
                       }}
                     >
-                      Continue
+                      <Play size={12} fill="currentColor" /> Continue
                     </Link>
                   )}
                   {iv.status === "completed" && (
                     <Link
                       href={`/interview/${iv.id}/report`}
-                      className="button-primary"
+                      className="button-secondary"
                       style={{
-                        textDecoration: "none",
-                        padding: "10px 14px",
-                        fontSize: 13,
+                        padding: "6px 12px",
+                        fontSize: 12,
+                        display: "flex",
+                        gap: 4
                       }}
                     >
-                      View report
+                      <FileText size={12} /> Report <ChevronRight size={12} />
                     </Link>
                   )}
                   <button
@@ -263,12 +311,14 @@ export default function Dashboard() {
                     disabled={deletingId === iv.id}
                     className="button-danger"
                     style={{
-                      padding: "10px 14px",
-                      fontSize: 13,
-                      opacity: deletingId === iv.id ? 0.6 : 1,
+                      padding: "6px 10px",
+                      fontSize: 12,
+                      display: "flex",
+                      gap: 4,
                     }}
                   >
-                    {deletingId === iv.id ? "Deleting..." : "Delete"}
+                    <Trash2 size={12} />
+                    <span>{deletingId === iv.id ? "..." : "Delete"}</span>
                   </button>
                 </div>
               </div>
@@ -276,6 +326,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Paginated Toolbar */}
         {!loading && !error && totalPages > 1 && (
           <div
             style={{
@@ -291,14 +342,15 @@ export default function Dashboard() {
               disabled={page <= 1}
               className="button-secondary"
               style={{
-                cursor: page <= 1 ? "not-allowed" : "pointer",
-                opacity: page <= 1 ? 0.5 : 1,
+                opacity: page <= 1 ? 0.4 : 1,
+                padding: "6px 12px",
+                fontSize: 12
               }}
             >
               Previous
             </button>
 
-            <p className="muted" style={{ fontSize: 14 }}>
+            <p className="muted" style={{ fontSize: 12, fontWeight: 600, fontStyle: "italic", fontFamily: "'Lora', Georgia, serif" }}>
               Page {page} of {totalPages}
             </p>
 
@@ -307,8 +359,9 @@ export default function Dashboard() {
               disabled={page >= totalPages}
               className="button-secondary"
               style={{
-                cursor: page >= totalPages ? "not-allowed" : "pointer",
-                opacity: page >= totalPages ? 0.5 : 1,
+                opacity: page >= totalPages ? 0.4 : 1,
+                padding: "6px 12px",
+                fontSize: 12
               }}
             >
               Next
@@ -316,6 +369,10 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+      
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </>
   );
 }
