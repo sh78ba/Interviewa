@@ -16,8 +16,9 @@ The backend expects these values from `.env`:
 - `ai_service_url`
 - `database_url`
 - `redis_url`
-- `jwt_secret`
-- `jwt_expire_minutes`
+- `ai_service_url`
+- `database_url`
+- `redis_url`
 - `groq_api_key` (optional, but recommended if the primary AI service is unavailable)
 - `langfuse_public_key` (optional)
 - `langfuse_secret_key` (optional)
@@ -75,7 +76,7 @@ The frontend will be available at `http://localhost:3000`.
 ## Main App Flow
 
 1. Open the frontend in the browser.
-2. Sign in or register.
+2. Create a new interview.
 3. Create a new interview.
 4. Upload a resume if needed.
 5. The app fetches the next question from the backend.

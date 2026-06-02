@@ -35,7 +35,7 @@ Interviewa helps candidates and teams run realistic interview simulations on the
 - Resume-aware retrieval pipeline (with optional ChromaDB)
 - Voice flow (speech generation + transcription)
 - Coding and non-coding round support
-- Authenticated multi-user interview dashboard
+- Local single-user interview dashboard
 - Paginated interview history and deletion
 - Final performance report with scoring insights
 
