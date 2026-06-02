@@ -1,16 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { clearToken, isLoggedIn } from "@/lib/store";
 
 export default function Navbar() {
-  const router = useRouter();
-
-  const logout = () => {
-    clearToken();
-    router.push("/login");
-  };
-
   return (
     <div className="nav-shell">
       <nav className="nav-inner">
@@ -48,9 +39,6 @@ export default function Navbar() {
           >
             Dashboard
           </Link>
-          <button onClick={logout} className="button-secondary">
-            Logout
-          </button>
         </div>
       </nav>
     </div>

@@ -6,7 +6,6 @@ from typing import Optional
 import os, shutil, uuid
 
 from core.database import get_db
-from core.auth import get_current_user
 from models.models import Interview, Question, Answer, Report
 from services.resume_service import parse_pdf, extract_profile
 from services.rag_service import ingest_resume, search_resume
@@ -26,9 +25,9 @@ async def start_interview(
     rounds: str = Form(...),           # comma-separated e.g. "resume,technical,hr"
     job_description: str = Form(""),
     resume: Optional[UploadFile] = File(None),
-    user_id: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    user_id = "local"
     resume_text = ""
     profile = {}
 
@@ -45,7 +44,7 @@ async def start_interview(
     rounds_list = [r.strip() for r in rounds.split(",")]
 
     interview = Interview(
-        user_id=user_id,
+        user_id="local",
         role=role,
         level=level,
         rounds=rounds_list,
@@ -93,8 +92,7 @@ async def start_interview(
 @router.get("/{interview_id}/next")
 async def next_question(
     interview_id: str,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Interview).where(Interview.id == interview_id))
     iv = result.scalar_one_or_none()
@@ -119,7 +117,7 @@ async def next_question(
         iv.current_round += 1
         iv.current_question_index = 0
         await db.commit()
-        return await next_question(interview_id, db, user_id)
+        return await next_question(interview_id, db)
 
     q = questions[iv.current_question_index]
 
@@ -153,8 +151,7 @@ class AnswerRequest(BaseModel):
 async def submit_answer(
     interview_id: str,
     req: AnswerRequest,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Question).where(Question.id == req.question_id))
     q = result.scalar_one_or_none()
@@ -214,8 +211,7 @@ async def submit_answer(
 @router.get("/{interview_id}/report")
 async def get_report(
     interview_id: str,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Interview).where(Interview.id == interview_id))
     iv = result.scalar_one_or_none()
@@ -267,8 +263,7 @@ async def get_report(
 async def list_interviews(
     page: int = 1,
     limit: int = 5,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     page = max(page, 1)
     limit = max(min(limit, 20), 1)
@@ -276,13 +271,11 @@ async def list_interviews(
     total_result = await db.execute(
         select(func.count())
         .select_from(Interview)
-        .where(Interview.user_id == user_id)
     )
     total = total_result.scalar_one() or 0
 
     result = await db.execute(
         select(Interview)
-        .where(Interview.user_id == user_id)
         .order_by(Interview.created_at.desc())
         .offset((page - 1) * limit)
         .limit(limit)
@@ -312,13 +305,11 @@ async def list_interviews(
 @router.delete("/{interview_id}")
 async def delete_interview(
     interview_id: str,
-    db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
         select(Interview)
         .where(Interview.id == interview_id)
-        .where(Interview.user_id == user_id)
     )
     interview = result.scalar_one_or_none()
     if not interview:

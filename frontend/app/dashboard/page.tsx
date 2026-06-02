@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
-import { isLoggedIn } from "@/lib/store";
 
 interface Interview {
   id: string;
@@ -30,7 +28,6 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const router = useRouter();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,12 +67,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (!isLoggedIn()) {
-      router.push("/login");
-      return;
-    }
     void loadInterviews(page);
-  }, [page, router]);
+  }, [page]);
 
   const deleteInterview = async (id: string) => {
     const confirmed = window.confirm(

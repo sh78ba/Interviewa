@@ -19,11 +19,8 @@ export default function Home() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/register" className="button-primary">
+            <Link href="/interview/new" className="button-primary">
               Get started
-            </Link>
-            <Link href="/login" className="button-secondary">
-              Login
             </Link>
           </div>
 
