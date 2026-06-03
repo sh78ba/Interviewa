@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { LayoutDashboard, Compass } from "lucide-react";
+import { LayoutDashboard, BookOpen } from "lucide-react";
 
 export default function Navbar() {
   return (
@@ -37,6 +37,21 @@ export default function Navbar() {
         </Link>
 
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <Link
+            href="/setup"
+            className="button-secondary"
+            style={{ 
+              textDecoration: "none", 
+              display: "flex", 
+              gap: 6, 
+              padding: "6px 12px", 
+              fontSize: 12,
+              borderRadius: 4
+            }}
+          >
+            <BookOpen size={14} />
+            Setup Guide
+          </Link>
           <Link
             href="/dashboard"
             className="button-secondary"

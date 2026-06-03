@@ -13,6 +13,12 @@ Open-source full-stack interview simulation with voice, coding rounds, resume-aw
 ![License](https://img.shields.io/badge/License-AGPLv3-blue)
 ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20Next.js-111827)
 
+<div style="margin: 16px 0;">
+  <a href="http://localhost:3000/setup" target="_blank">
+    <img src="https://img.shields.io/badge/Interactive%20Setup%20Guide-Open%20Local%20App-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Setup Guide Button" />
+  </a>
+</div>
+
 [Quickstart](#quickstart) • [Features](#features) • [Project-Structure](#project-structure) • [Contributing](#contributing) • [Community](#community)
 
 </div>
