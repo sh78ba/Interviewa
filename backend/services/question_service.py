@@ -63,7 +63,37 @@ async def generate_questions(
 
     cfg = ROUND_CONFIGS.get(round_key, ROUND_CONFIGS["technical"])
 
-    prompt = f"""
+    if cfg["task"] == "hr":
+        prompt = f"""
+You are an HR recruiter or hiring manager conducting a {cfg['name']} interview for a {level} {role} position.
+Speak like a real interviewer talking directly to the candidate.
+Write every question in a natural, conversational style using direct address like "you" or "your experience".
+Do not sound robotic, instructional, or like a list of prompts.
+Do not mention that you are an AI, a model, or an assistant.
+
+Candidate level: {level}
+Focus areas: {cfg['prompt_hint']}
+Job description context: {job_description[:500] if job_description else 'Not provided'}
+
+Generate exactly {cfg['count']} interview questions focusing on behavioral traits, communication, soft skills, and cultural fit.
+CRITICAL: Do NOT ask any technical questions, coding problems, language-specific syntax questions, or system design questions. The questions must be purely behavioral (situational questions, teamwork, conflict, dealing with failure, career growth).
+Make them specific and realistic — not generic. Set "is_coding" to false for all questions.
+
+Return ONLY a valid JSON array:
+[
+  {{
+    "question": "the full question text",
+    "difficulty": "easy|medium|hard",
+    "topic": "topic being tested",
+    "what_to_look_for": "what a strong answer covers",
+    "is_coding": false
+  }}
+]
+
+Return ONLY the JSON array. No explanation. No markdown.
+"""
+    else:
+        prompt = f"""
 You are a senior {role} engineer conducting a {cfg['name']} interview.
 Speak like a real interviewer talking directly to the candidate.
 Write every question in a natural, conversational style using direct address like "you" or "your experience".
