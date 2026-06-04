@@ -11,6 +11,7 @@ interface Question {
   question_id: string;
   question: string;
   round: string;
+  round_index: number;
   difficulty: string;
   topic: string;
   is_coding: boolean;
@@ -33,6 +34,7 @@ type Phase =
   | "listening" // user is speaking
   | "processing" // transcribing + evaluating
   | "feedback" // showing + speaking feedback
+  | "round_transition" // showing round transition screen
   | "done"; // all rounds complete
 
 export default function InterviewRoom() {
@@ -41,11 +43,13 @@ export default function InterviewRoom() {
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [question, setQuestion] = useState<Question | null>(null);
+  const [pendingQuestion, setPendingQuestion] = useState<Question | null>(null);
   const [transcript, setTranscript] = useState("");
   const [code, setCode] = useState("// Write your solution here\n");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [statusText, setStatusText] = useState("Loading your interview...");
 
+  const currentQuestionRef = useRef<Question | null>(null);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -53,6 +57,11 @@ export default function InterviewRoom() {
   const fetchAndSpeakRef = useRef<(() => Promise<void>) | null>(null);
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
   const processAnswerRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Sync ref with current question
+  useEffect(() => {
+    currentQuestionRef.current = question;
+  }, [question]);
 
   // ── Speak text via Colab TTS ─────────────────────────────────────────────
   const speak = useCallback(async (text: string): Promise<void> => {
@@ -76,6 +85,31 @@ export default function InterviewRoom() {
     });
   }, []);
 
+  // ── Start the next round ─────────────────────────────────────────────────
+  const startNextRound = async () => {
+    if (!pendingQuestion) return;
+    const q = pendingQuestion;
+    setQuestion(q);
+    setPendingQuestion(null);
+    setPhase("ai_speaking");
+
+    try {
+      const intro = `Welcome to your ${q.round.replace(/_/g, " ")} round. Let's begin.`;
+      const fullText = `${intro} ${q.question}`;
+      setStatusText("AI is speaking...");
+      await speak(fullText);
+
+      if (!q.is_coding) {
+        await startListeningRef.current?.();
+      } else {
+        setPhase("feedback");
+        setStatusText("Write your solution, then submit");
+      }
+    } catch {
+      setStatusText("Error speaking question. Continuing...");
+    }
+  };
+
   // ── Fetch next question then speak it ────────────────────────────────────
   const fetchAndSpeak = useCallback(async () => {
     setPhase("loading");
@@ -98,13 +132,23 @@ export default function InterviewRoom() {
       }
 
       const q: Question = res.data;
+      const prevQ = currentQuestionRef.current;
+
+      // Detect round transition (skip if first question)
+      if (prevQ && q.round_index > prevQ.round_index) {
+        setPendingQuestion(q);
+        setPhase("round_transition");
+        setStatusText(`Round completed. Next up: ${q.round.replace(/_/g, " ")}`);
+        return;
+      }
+
       setQuestion(q);
       setPhase("ai_speaking");
 
       // Build what the AI says
       const intro =
         q.question_number === 1
-          ? `Welcome to your ${q.round} round. Let's begin.`
+          ? `Welcome to your ${q.round.replace(/_/g, " ")} round. Let's begin.`
           : `Next question.`;
 
       const fullText = `${intro} ${q.question}`;
@@ -309,6 +353,66 @@ export default function InterviewRoom() {
       </main>
     );
 
+  if (phase === "round_transition")
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 20,
+          background: "var(--bg-soft)",
+          padding: 24
+        }}
+      >
+        <div className="surface" style={{ width: "100%", maxWidth: 480, padding: 32, borderRadius: 8, textAlign: "center" }}>
+          <div style={{ 
+            width: 64, 
+            height: 64, 
+            borderRadius: "50%", 
+            background: "var(--panel-strong)", 
+            border: "1px solid var(--line)", 
+            display: "inline-flex", 
+            alignItems: "center", 
+            justifyContent: "center",
+            color: "var(--text-strong)",
+            fontSize: 24,
+            marginBottom: 16
+          }}>
+            🏁
+          </div>
+          <h2 style={{ fontSize: 22, fontWeight: 650, color: "var(--text-strong)", fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", marginBottom: 8 }}>
+            Round Completed!
+          </h2>
+          <p style={{ color: "var(--text)", fontSize: 13, lineHeight: 1.6, marginBottom: 20 }}>
+            You have completed the previous round. Take a short breath before entering the next session.
+          </p>
+          
+          <div className="surface-strong" style={{ padding: 16, borderRadius: 6, marginBottom: 24, textAlign: "left", borderLeft: "2px solid #111" }}>
+            <span style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+              UPCOMING SESSION
+            </span>
+            <h4 style={{ fontSize: 15, fontWeight: 700, color: "var(--text-strong)", textTransform: "capitalize", marginTop: 4 }}>
+              {pendingQuestion?.round.replace(/_/g, " ")} Round
+            </h4>
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+              Topic Focus: {pendingQuestion?.topic || "Technical core"}
+            </p>
+          </div>
+
+          <button
+            onClick={startNextRound}
+            className="button-primary"
+            style={{ width: "100%", padding: "12px 24px", fontSize: 13, display: "flex", gap: 8, justifyContent: "center" }}
+          >
+            Start Next Round <ChevronRight size={16} />
+          </button>
+        </div>
+      </main>
+    );
+
   const sidebarContent = (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       {/* HUD Bar */}
@@ -328,23 +432,6 @@ export default function InterviewRoom() {
           >
             <span style={{ fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>{question?.round.replace("_", " ") || "—"}</span>
           </span>
-          {question?.difficulty && (
-            <span
-              style={{ 
-                fontSize: 10, 
-                color: "#111", 
-                background: "var(--bg-soft)",
-                border: "1px solid var(--line)",
-                padding: "3px 8px",
-                borderRadius: 3,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.04em"
-              }}
-            >
-              {question.difficulty}
-            </span>
-          )}
         </div>
         <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
           {question?.progress || "—"}

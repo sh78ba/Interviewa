@@ -10,6 +10,19 @@ async def evaluate_answer(
     what_to_look_for: str = ""
 ) -> dict:
 
+    is_behavioral = round_name.lower() in ["hr", "cultural", "behavioural", "behavioral"]
+    star_instruction = ""
+    if is_behavioral:
+        star_instruction = """
+This is a Behavioral / HR question. You MUST evaluate the response using the STAR method:
+- Situation (S): Did the candidate set the scene and provide necessary context?
+- Task (T): Did they explain their specific responsibility or challenge?
+- Action (A): Did they describe the specific actions they took (what they did, how, and why)?
+- Result (R): Did they share the outcome, including any positive metrics or lessons learned?
+
+Check which of these four elements are present, missing, or weak. In the feedback, structure your evaluation showing the STAR breakdown. If the candidate failed to explain a clear Result (R) or Action (A), penalize the completeness score.
+"""
+
     prompt = f"""
 You are a strict but fair senior engineer evaluating an interview answer.
 
@@ -17,11 +30,11 @@ Score ONLY the candidate's actual answer to the question below.
 Do NOT reward buzzwords, vague filler, or unrelated technical topics.
 If the answer is off-topic, generic, or does not directly answer the question,
 the score MUST be low even if a few keywords are correct.
-
+{star_instruction}
 Use this rubric:
 - relevance (0-4): how directly the answer addresses the question
-- correctness (0-4): whether the facts/approach are accurate
-- completeness (0-2): whether the answer is complete and specific
+- correctness (0-4): whether the facts/approach/behavior are accurate/appropriate
+- completeness (0-2): whether the answer is complete and specific (e.g., covers all STAR elements if behavioral)
 
 The final score must be the sum of those three parts and must stay within 0-10.
 Hard rules:
@@ -43,10 +56,10 @@ Return ONLY valid JSON:
     "correctness_score": 3,
     "completeness_score": 2,
     "score": 8,
-  "feedback": "2 sentence explanation of score",
+  "feedback": "2 sentence explanation of score and STAR alignment",
   "strengths": "what was good",
   "weaknesses": "what was missing",
-  "better_answer": "example of a strong answer",
+  "better_answer": "example of a strong answer framed using STAR method",
   "next_difficulty": "easier|same|harder"
 }}
 
