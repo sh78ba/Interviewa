@@ -8,7 +8,7 @@ import os, shutil, uuid
 from core.database import get_db
 from models.models import Interview, Question, Answer, Report
 from services.resume_service import parse_pdf, extract_profile
-from services.rag_service import ingest_resume, search_resume
+from services.rag_service import ingest_resume, search_resume, delete_resume
 from services.question_service import generate_questions, ROUND_CONFIGS
 from services.evaluation_service import evaluate_answer, generate_report
 
@@ -33,9 +33,13 @@ async def start_interview(
 
     if resume:
         path = f"{UPLOAD_DIR}/{uuid.uuid4()}.pdf"
-        with open(path, "wb") as f:
-            shutil.copyfileobj(resume.file, f)
-        resume_text = parse_pdf(path)
+        try:
+            with open(path, "wb") as f:
+                shutil.copyfileobj(resume.file, f)
+            resume_text = parse_pdf(path)
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
         profile = await extract_profile(resume_text, role, level)
 
     profile["role"] = role
@@ -207,6 +211,44 @@ async def submit_answer(
     }
 
 
+# ── End interview ────────────────────────────────────────────────────────────
+@router.post("/{interview_id}/end")
+async def end_interview(
+    interview_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Interview).where(Interview.id == interview_id))
+    iv = result.scalar_one_or_none()
+    if not iv:
+        raise HTTPException(404, "Interview not found")
+    iv.status = "completed"
+
+    # Find all questions for this interview
+    q_result = await db.execute(select(Question).where(Question.interview_id == interview_id))
+    questions = q_result.scalars().all()
+
+    # Find already answered questions
+    a_result = await db.execute(select(Answer).where(Answer.interview_id == interview_id))
+    answered_q_ids = {a.question_id for a in a_result.scalars().all()}
+
+    # Insert dummy answers with score 0 for unanswered ones
+    for q in questions:
+        if q.id not in answered_q_ids:
+            db.add(Answer(
+                interview_id=interview_id,
+                question_id=q.id,
+                round_name=q.round_name,
+                answer_text="No answer provided (interview ended early)",
+                code="",
+                score=0,
+                feedback="This question was not answered because the interview was terminated early.",
+                better_answer="Provide a complete response to this question to get feedback."
+            ))
+
+    await db.commit()
+    return {"status": "completed", "message": "Interview ended"}
+
+
 # ── Get report ───────────────────────────────────────────────────────────────
 @router.get("/{interview_id}/report")
 async def get_report(
@@ -320,5 +362,8 @@ async def delete_interview(
     await db.execute(delete(Report).where(Report.interview_id == interview_id))
     await db.execute(delete(Interview).where(Interview.id == interview_id))
     await db.commit()
+
+    # Clean up RAG/ChromaDB data
+    await delete_resume(interview_id)
 
     return {"message": "Interview deleted"}

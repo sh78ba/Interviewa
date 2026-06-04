@@ -1,59 +1,25 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import api from "@/lib/api";
 import { 
-  CheckCircle2, Circle, Copy, Check, Server, Laptop, 
-  Database, Cpu, ExternalLink, RefreshCw, BookOpen, 
-  Terminal, Key, AlertCircle, Wifi, Play, HelpCircle, Info
+  Server, Laptop, Cpu, ExternalLink, RefreshCw, 
+  BookOpen, Terminal, Key, Play, Info, CheckCircle2, Wifi, Copy, Check, Layers
 } from "lucide-react";
 
 export default function SetupGuide() {
+  const pathname = usePathname();
   // Tabs: 'overview' | 'backend' | 'env' | 'colab' | 'frontend'
   const [activeTab, setActiveTab] = useState<string>("overview");
   
-  // Prerequisites checklist state
-  const [prereqs, setPrereqs] = useState({
-    python: false,
-    node: false,
-    redis: false,
-    colab: false,
-    env: false
-  });
-
   // Copied feedback states
   const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
-
-  // Health check test state
-  const [healthStatus, setHealthStatus] = useState<"idle" | "testing" | "success" | "failed">("idle");
-  const [healthError, setHealthError] = useState<string>("");
-
-  const togglePrereq = (key: keyof typeof prereqs) => {
-    setPrereqs(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedBlock(id);
     setTimeout(() => setCopiedBlock(null), 2000);
-  };
-
-  const testBackendConnection = async () => {
-    setHealthStatus("testing");
-    setHealthError("");
-    try {
-      const res = await api.get("/health");
-      if (res.data && res.data.status === "ok") {
-        setHealthStatus("success");
-      } else {
-        setHealthStatus("failed");
-        setHealthError("Backend responded but in an unexpected format.");
-      }
-    } catch (err: any) {
-      setHealthStatus("failed");
-      setHealthError(err.message || "Failed to reach the backend API server. Make sure uvicorn is running.");
-    }
   };
 
   const codeBlocks = {
@@ -76,214 +42,72 @@ npm install`,
   return (
     <>
       <Navbar />
-      <main className="page-container" style={{ paddingTop: 32 }}>
-        {/* Header HUD */}
-        <div className="surface" style={{ padding: 28, marginBottom: 20, borderRadius: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="page-kicker">
-              <BookOpen size={13} style={{ marginRight: 4 }} /> Installation & Setup Guide
+      <main style={{ 
+        minHeight: "calc(100vh - 72px)", 
+        display: "flex", 
+        alignItems: "flex-start", 
+        justifyContent: "center", 
+        padding: "40px 16px",
+        background: "var(--bg-soft)",
+        boxSizing: "border-box"
+      }}>
+        <div className="surface" style={{ width: "100%", maxWidth: 1120, padding: "24px", borderRadius: 12 }}>
+          {/* Header */}
+          <div style={{ marginBottom: 16 }}>
+            <span className="page-kicker" style={{ fontSize: 11, padding: "2px 6px" }}>
+              <BookOpen size={11} style={{ marginRight: 4, display: "inline-flex", verticalAlign: "middle" }} /> Setup Guide
             </span>
+            <h1 className="section-title" style={{ fontSize: 22, marginTop: 8 }}>
+              Getting started with <span>your local instance</span>.
+            </h1>
+            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.4 }}>
+              Set up the FastAPI backend, configure database connections, run the optional Colab GPU proxy, 
+              and spin up the Next.js studio.
+            </p>
           </div>
-          <h1 className="page-title" style={{ fontSize: "clamp(26px, 3.5vw, 38px)", marginTop: 10 }}>
-            Getting started with <span>your local instance</span>.
-          </h1>
-          <p className="page-subtitle" style={{ fontSize: 14, marginTop: 8, lineHeight: 1.6 }}>
-            Set up the FastAPI backend, configure database connections, run the optional Colab GPU proxy, 
-            and spin up the Next.js studio.
-          </p>
-        </div>
 
-        <section className="hero-section" style={{ alignItems: "start", gap: 24 }}>
-          
-          {/* Left Column: Diagnostics & Prerequisites */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 96 }}>
-            
-            {/* Prerequisites Checklist */}
-            <div className="surface" style={{ padding: 24, borderRadius: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
-                  Setup Checklist
-                </h3>
-                <span style={{ fontSize: 10, color: "var(--muted)", fontWeight: 600 }}>
-                  {Object.values(prereqs).filter(Boolean).length} of {Object.keys(prereqs).length} done
-                </span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {[
-                  { key: "python" as const, label: "Python 3.11+ installed" },
-                  { key: "node" as const, label: "Node.js 18+ & npm installed" },
-                  { key: "env" as const, label: "Created backend/.env file" },
-                  { key: "colab" as const, label: "AI Service running (Colab or Local)" },
-                  { key: "redis" as const, label: "Redis server configured (optional)" }
-                ].map((item) => {
-                  const checked = prereqs[item.key];
-                  return (
-                    <button
-                      key={item.key}
-                      onClick={() => togglePrereq(item.key)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        textAlign: "left",
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: 6,
-                        background: checked ? "var(--bg-soft)" : "transparent",
-                        border: "1px solid " + (checked ? "var(--line)" : "transparent"),
-                        transition: "all 150ms ease"
-                      }}
-                    >
-                      {checked ? (
-                        <CheckCircle2 size={16} color="#111" />
-                      ) : (
-                        <Circle size={16} color="var(--muted)" />
-                      )}
-                      <span style={{ 
-                        fontSize: 12, 
-                        fontWeight: checked ? 600 : 500,
-                        color: checked ? "var(--text-strong)" : "var(--text)",
-                        textDecoration: checked ? "line-through" : "none",
-                        opacity: checked ? 0.75 : 1
-                      }}>
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Health Connection Diagnostic */}
-            <div className="surface" style={{ padding: 24, borderRadius: 8 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)", marginBottom: 10 }}>
-                Live Connection Test
-              </h3>
-              <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginBottom: 14 }}>
-                Verify if your local React frontend can establish a connection to the uvicorn FastAPI backend server (port 8000).
-              </p>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {healthStatus === "idle" && (
-                  <div style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>
-                    Not tested yet
-                  </div>
-                )}
-                {healthStatus === "testing" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text)" }}>
-                    <RefreshCw size={14} className="animate-spin" />
-                    <span>Pinging http://localhost:8000/health...</span>
-                  </div>
-                )}
-                {healthStatus === "success" && (
-                  <div style={{ 
-                    display: "flex", 
-                    gap: 8, 
-                    alignItems: "center", 
-                    background: "rgba(0,0,0,0.01)", 
-                    border: "1px solid #111", 
-                    color: "var(--text-strong)", 
-                    padding: "8px 12px", 
-                    borderRadius: 4 
-                  }}>
-                    <Wifi size={14} />
-                    <span style={{ fontSize: 11, fontWeight: 700 }}>API Connected (Status: OK)</span>
-                  </div>
-                )}
-                {healthStatus === "failed" && (
-                  <div style={{ 
-                    display: "flex", 
-                    flexDirection: "column",
-                    gap: 4, 
-                    background: "var(--bg-soft)", 
-                    border: "1px solid var(--line)", 
-                    padding: "10px 12px", 
-                    borderRadius: 4 
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-strong)", fontWeight: 700, fontSize: 11 }}>
-                      <AlertCircle size={14} />
-                      <span>API Offline / Unreachable</span>
-                    </div>
-                    <span style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.4 }}>
-                      {healthError}
-                    </span>
-                  </div>
-                )}
-
-                <button
-                  onClick={testBackendConnection}
-                  disabled={healthStatus === "testing"}
-                  className="button-secondary"
-                  style={{ width: "100%", padding: "8px 12px", fontSize: 12, display: "flex", gap: 6 }}
+          {/* Sub-navigation Tabs */}
+          <div style={{ 
+            display: "flex", 
+            gap: 8, 
+            borderBottom: "1px solid var(--line)", 
+            paddingBottom: 0,
+            marginBottom: 20
+          }}>
+            {[
+              { path: "/setup", label: "1. Instructions", icon: <BookOpen size={12} /> },
+              { path: "/setup/checklist", label: "2. Setup Checklist", icon: <CheckCircle2 size={12} /> },
+              { path: "/setup/connection-test", label: "3. Connection Test", icon: <Wifi size={12} /> },
+              { path: "/setup/architecture", label: "4. Architecture", icon: <Layers size={12} /> }
+            ].map((tab) => {
+              const active = pathname === tab.path;
+              return (
+                <Link
+                  key={tab.path}
+                  href={tab.path}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 12px",
+                    fontSize: 11,
+                    fontWeight: active ? 700 : 500,
+                    borderBottom: active ? "2px solid #111" : "2px solid transparent",
+                    color: active ? "var(--text-strong)" : "var(--muted)",
+                    textDecoration: "none",
+                    fontFamily: active ? "'Lora', Georgia, serif" : "inherit",
+                    fontStyle: active ? "italic" : "normal"
+                  }}
                 >
-                  <RefreshCw size={12} className={healthStatus === "testing" ? "animate-spin" : ""} />
-                  Test connection
-                </button>
-              </div>
-            </div>
-
-            {/* Architecture Flow SVG */}
-            <div className="surface" style={{ padding: 24, borderRadius: 8 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)", marginBottom: 12 }}>
-                System Architecture
-              </h3>
-              <div style={{ display: "flex", justifyContent: "center", background: "var(--bg-soft)", border: "1px solid var(--line)", borderRadius: 6, padding: 12 }}>
-                <svg width="100%" height="240" viewBox="0 0 300 240" style={{ maxWidth: 260 }}>
-                  {/* Next.js Box */}
-                  <rect x="100" y="10" width="100" height="35" rx="4" fill="white" stroke="#111" strokeWidth="1" />
-                  <text x="150" y="32" fontFamily="sans-serif" fontSize="10" fontWeight="bold" textAnchor="middle">Next.js UI</text>
-                  <text x="150" y="42" fontFamily="monospace" fontSize="8" fill="#737373" textAnchor="middle">localhost:3000</text>
-
-                  {/* Flow Arrow: Next.js -> FastAPI */}
-                  <path d="M150 45 L150 80" fill="none" stroke="#111" strokeWidth="1" markerEnd="url(#arrow)" />
-                  <text x="155" y="65" fontFamily="sans-serif" fontSize="8" fill="#737373">REST / HTTP</text>
-
-                  {/* FastAPI Box */}
-                  <rect x="100" y="80" width="100" height="45" rx="4" fill="white" stroke="#111" strokeWidth="1" />
-                  <text x="150" y="98" fontFamily="sans-serif" fontSize="10" fontWeight="bold" textAnchor="middle">FastAPI Server</text>
-                  <text x="150" y="108" fontFamily="monospace" fontSize="8" fill="#737373" textAnchor="middle">localhost:8000</text>
-                  <text x="150" y="118" fontFamily="sans-serif" fontSize="8" fill="#737373" textAnchor="middle">(Uvicorn App)</text>
-
-                  {/* Flow Arrow: FastAPI -> SQLite */}
-                  <path d="M100 102 L45 102 L45 150" fill="none" stroke="#111" strokeWidth="1" strokeDasharray="3,3" markerEnd="url(#arrow)" />
-                  
-                  {/* SQLite Box */}
-                  <rect x="10" y="150" width="70" height="35" rx="4" fill="white" stroke="#d1d1d1" strokeWidth="1" />
-                  <text x="45" y="172" fontFamily="sans-serif" fontSize="9" fontWeight="bold" textAnchor="middle">SQLite DB</text>
-                  <text x="45" y="181" fontFamily="monospace" fontSize="7" fill="#737373" textAnchor="middle">interviewa.db</text>
-
-                  {/* Flow Arrow: FastAPI -> Redis */}
-                  <path d="M200 102 L255 102 L255 150" fill="none" stroke="#111" strokeWidth="1" strokeDasharray="3,3" markerEnd="url(#arrow)" />
-
-                  {/* Redis Box */}
-                  <rect x="220" y="150" width="70" height="35" rx="4" fill="white" stroke="#d1d1d1" strokeWidth="1" />
-                  <text x="255" y="172" fontFamily="sans-serif" fontSize="9" fontWeight="bold" textAnchor="middle">Redis Cache</text>
-                  <text x="255" y="181" fontFamily="monospace" fontSize="7" fill="#737373" textAnchor="middle">Session store</text>
-
-                  {/* Flow Arrow: FastAPI -> Colab GPU proxy */}
-                  <path d="M150 125 L150 200" fill="none" stroke="#111" strokeWidth="1" markerEnd="url(#arrow)" />
-                  <text x="155" y="145" fontFamily="sans-serif" fontSize="8" fill="#737373">Proxy Tunnel</text>
-
-                  {/* Colab Box */}
-                  <rect x="85" y="200" width="130" height="35" rx="4" fill="white" stroke="#111" strokeWidth="1" />
-                  <text x="150" y="215" fontFamily="sans-serif" fontSize="9" fontWeight="bold" textAnchor="middle">Google Colab Runtime</text>
-                  <text x="150" y="225" fontFamily="sans-serif" fontSize="7" fill="#737373" textAnchor="middle">Whisper Speech + LLM (GPU)</text>
-
-                  {/* Marker definitions for arrows */}
-                  <defs>
-                    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M 0 2 L 10 5 L 0 8 z" fill="#111" />
-                    </marker>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-            
+                  {tab.icon}
+                  {tab.label}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Right Column: Tabbed Instructions */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            
+          {/* Tabbed Instructions */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {/* Tabs Selector */}
             <div style={{ 
               display: "flex", 
@@ -293,11 +117,11 @@ npm install`,
               overflowX: "auto"
             }}>
               {[
-                { key: "overview", label: "Overview", icon: <Info size={13} /> },
-                { key: "backend", label: "1. Backend", icon: <Server size={13} /> },
-                { key: "env", label: "2. Environment Config", icon: <Key size={13} /> },
-                { key: "colab", label: "3. Colab AI GPU", icon: <Cpu size={13} /> },
-                { key: "frontend", label: "4. Frontend", icon: <Laptop size={13} /> }
+                { key: "overview", label: "Overview", icon: <Info size={12} /> },
+                { key: "backend", label: "1. Backend", icon: <Server size={12} /> },
+                { key: "env", label: "2. Env Config", icon: <Key size={12} /> },
+                { key: "colab", label: "3. Colab GPU", icon: <Cpu size={12} /> },
+                { key: "frontend", label: "4. Frontend", icon: <Laptop size={12} /> }
               ].map((tab) => {
                 const active = activeTab === tab.key;
                 return (
@@ -307,9 +131,9 @@ npm install`,
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 6,
-                      padding: "10px 14px",
-                      fontSize: 12,
+                      gap: 4,
+                      padding: "8px 12px",
+                      fontSize: 11,
                       fontWeight: active ? 700 : 500,
                       borderBottom: active ? "2px solid #111" : "2px solid transparent",
                       color: active ? "var(--text-strong)" : "var(--muted)",
@@ -328,68 +152,58 @@ npm install`,
             </div>
 
             {/* Tab Panels */}
-            <div className="surface" style={{ padding: 28, borderRadius: 8 }}>
+            <div className="surface-strong" style={{ padding: "16px 20px", borderRadius: 8 }}>
               
               {/* PANEL: Overview */}
               {activeTab === "overview" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
                       Architecture & Flow
                     </h2>
-                    <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginTop: 8 }}>
+                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
                       Interviewa is a self-hostable full-stack application built to run on your local infrastructure.
                       It splits responsibilities into three logical blocks:
                     </p>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12, marginTop: 8 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, marginTop: 4 }}>
                     {[
                       {
                         title: "FastAPI Backend (Port 8000)",
-                        desc: "Handles interview sessions, database storage, candidate report compilation, voice file handling, and connects to ChromaDB or Redis.",
-                        icon: <Server size={16} />
+                        desc: "Handles interview sessions, database storage, report compilation, and connects to ChromaDB or Redis.",
+                        icon: <Server size={14} />
                       },
                       {
                         title: "Next.js Frontend (Port 3000)",
-                        desc: "Implements the distraction-free interview studio workspace, text editor for coding rounds, voice visualizer, and dashboard reporting.",
-                        icon: <Laptop size={16} />
+                        desc: "Implements the distraction-free interview studio workspace, text editor for coding, and dashboard reporting.",
+                        icon: <Laptop size={14} />
                       },
                       {
                         title: "AI Inference Service (Colab/Local)",
-                        desc: "Whisper speech-to-text pipeline, text-to-speech engine, and the LLM evaluators. Recommended to run on a Google Colab GPU notebook.",
-                        icon: <Cpu size={16} />
+                        desc: "Whisper speech-to-text pipeline, text-to-speech engine, and LLM evaluators. Runs on free T4 GPU Colab notebook.",
+                        icon: <Cpu size={14} />
                       }
                     ].map((comp, idx) => (
-                      <div key={idx} className="surface-strong" style={{ padding: 14, borderRadius: 6, display: "flex", gap: 12 }}>
-                        <div style={{ background: "rgba(0,0,0,0.02)", width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+                      <div key={idx} style={{ padding: 10, borderRadius: 6, display: "flex", gap: 10, background: "rgba(0,0,0,0.015)", border: "1px solid var(--line)" }}>
+                        <div style={{ background: "rgba(0,0,0,0.02)", width: 24, height: 24, borderRadius: "50%", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
                           {comp.icon}
                         </div>
                         <div>
-                          <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
+                          <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
                             {comp.title}
                           </h4>
-                          <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.4, marginTop: 2 }}>
+                          <p style={{ fontSize: 10, color: "var(--text)", lineHeight: 1.4, marginTop: 1 }}>
                             {comp.desc}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
-
-                  <div style={{ background: "var(--bg-soft)", border: "1px solid var(--line)", padding: 14, borderRadius: 6, marginTop: 8 }}>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", display: "flex", alignItems: "center", gap: 6 }}>
-                      <Info size={14} /> Quick-Start Checklist
-                    </h4>
-                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
-                      To set everything up, follow tabs 1 through 4 in order. You'll run the backend server first, 
-                      configure the variables inside `.env`, connect your AI service, and then start this React web interface.
-                    </p>
-                  </div>
                   
-                  <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
-                    <button onClick={() => setActiveTab("backend")} className="button-primary" style={{ fontSize: 12, display: "flex", gap: 6 }}>
-                      Start Step 1 <Play size={12} fill="white" />
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+                    <button onClick={() => setActiveTab("backend")} className="button-primary" style={{ padding: "6px 12px", fontSize: 11, display: "flex", gap: 4 }}>
+                      Start Step 1 <Play size={10} fill="white" />
                     </button>
                   </div>
                 </div>
@@ -397,51 +211,45 @@ npm install`,
 
               {/* PANEL: Backend Setup */}
               {activeTab === "backend" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
                       1. Backend Installation
                     </h2>
-                    <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginTop: 6 }}>
-                      The backend runs on Python. Set up a virtual environment to manage dependencies, install requirements, and run with Uvicorn.
+                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
+                      The backend runs on Python. Set up a virtual environment, install dependencies, and run with Uvicorn.
                     </p>
                   </div>
 
-                  {/* Step 1.1 */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ display: "inline-flex", width: 18, height: 18, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>1</span>
-                      Create and Activate Virtual Environment
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", width: 16, height: 16, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700 }}>1</span>
+                      Activate Virtual Environment
                     </h4>
                     <TerminalBlock code={codeBlocks.backendVenv} id="venv" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
                   </div>
 
-                  {/* Step 1.2 */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ display: "inline-flex", width: 18, height: 18, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>2</span>
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", width: 16, height: 16, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700 }}>2</span>
                       Install Python Dependencies
                     </h4>
                     <TerminalBlock code={codeBlocks.backendDeps} id="deps" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
                   </div>
 
-                  {/* Step 1.3 */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ display: "inline-flex", width: 18, height: 18, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>3</span>
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", width: 16, height: 16, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700 }}>3</span>
                       Launch FastAPI Server
                     </h4>
                     <TerminalBlock code={codeBlocks.backendStart} id="start" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
-                    <p style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, lineHeight: 1.4 }}>
-                      Note: On first startup, the database initialize command runs automatically, creating a local SQLite file in the backend root directory.
-                    </p>
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <button onClick={() => setActiveTab("overview")} className="button-secondary" style={{ fontSize: 12 }}>
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <button onClick={() => setActiveTab("overview")} className="button-secondary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Back
                     </button>
-                    <button onClick={() => setActiveTab("env")} className="button-primary" style={{ fontSize: 12 }}>
+                    <button onClick={() => setActiveTab("env")} className="button-primary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Next: Env Config
                     </button>
                   </div>
@@ -450,75 +258,68 @@ npm install`,
 
               {/* PANEL: Environment Variables */}
               {activeTab === "env" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
                       2. Environment Configuration
                     </h2>
-                    <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginTop: 6 }}>
-                      Create a file named `.env` in the `backend/` directory by copying `backend/.env.example`.
+                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
+                      Create a `.env` in the `backend/` directory by copying `backend/.env.example`.
                     </p>
                   </div>
 
-                  {/* Copy template */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8 }}>
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
                       Environment Variables Template (.env)
                     </h4>
                     <TerminalBlock code={codeBlocks.envTemplate} id="env" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
                   </div>
 
-                  {/* Documentation table */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8 }}>
-                      Variable Descriptions
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
+                      Variables
                     </h4>
                     <div style={{ border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, textAlign: "left" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10, textAlign: "left" }}>
                         <thead>
                           <tr style={{ background: "var(--bg-soft)", borderBottom: "1px solid var(--line)" }}>
-                            <th style={{ padding: "8px 10px", fontWeight: 700 }}>Variable</th>
-                            <th style={{ padding: "8px 10px", fontWeight: 700 }}>Description</th>
-                            <th style={{ padding: "8px 10px", fontWeight: 700 }}>Default / Option</th>
+                            <th style={{ padding: "6px 8px", fontWeight: 700 }}>Variable</th>
+                            <th style={{ padding: "6px 8px", fontWeight: 700 }}>Description</th>
+                            <th style={{ padding: "6px 8px", fontWeight: 700 }}>Default</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace", color: "var(--text-strong)" }}>ai_service_url</td>
-                            <td style={{ padding: "8px 10px" }}>URL pointing to the Whisper transcription and LLM inference pipeline.</td>
-                            <td style={{ padding: "8px 10px", color: "var(--muted)" }}>Ngrok URL from Google Colab</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>ai_service_url</td>
+                            <td style={{ padding: "6px 8px" }}>Ngrok URL from Colab</td>
+                            <td style={{ padding: "6px 8px", color: "var(--muted)" }}>Required</td>
                           </tr>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace", color: "var(--text-strong)" }}>database_url</td>
-                            <td style={{ padding: "8px 10px" }}>SQLAlchemy connection string for saving interview sessions and reports.</td>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace" }}>sqlite:///./interviewa.db</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>database_url</td>
+                            <td style={{ padding: "6px 8px" }}>Session database url</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>sqlite:///...</td>
                           </tr>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace", color: "var(--text-strong)" }}>redis_url</td>
-                            <td style={{ padding: "8px 10px" }}>Redis address used to store session states and caching.</td>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace" }}>redis://localhost:6379/0</td>
-                          </tr>
-                          <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace", color: "var(--text-strong)" }}>groq_api_key</td>
-                            <td style={{ padding: "8px 10px" }}>Optional Groq API key used as fallback for LLM evaluation.</td>
-                            <td style={{ padding: "8px 10px", color: "var(--muted)" }}>Optional</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>redis_url</td>
+                            <td style={{ padding: "6px 8px" }}>Redis Cache address</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>redis://...</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: "8px 10px", fontFamily: "monospace", color: "var(--text-strong)" }}>chroma_host / port</td>
-                            <td style={{ padding: "8px 10px" }}>Address for Chroma Vector DB. Used to parse and fetch details from resumes.</td>
-                            <td style={{ padding: "8px 10px", color: "var(--muted)" }}>Optional (will skip gracefully)</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>groq_api_key</td>
+                            <td style={{ padding: "6px 8px" }}>Groq API key for evaluation fallback</td>
+                            <td style={{ padding: "6px 8px", color: "var(--muted)" }}>Optional</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <button onClick={() => setActiveTab("backend")} className="button-secondary" style={{ fontSize: 12 }}>
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <button onClick={() => setActiveTab("backend")} className="button-secondary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Back
                     </button>
-                    <button onClick={() => setActiveTab("colab")} className="button-primary" style={{ fontSize: 12 }}>
-                      Next: Colab AI GPU
+                    <button onClick={() => setActiveTab("colab")} className="button-primary" style={{ padding: "6px 12px", fontSize: 11 }}>
+                      Next: Colab GPU
                     </button>
                   </div>
                 </div>
@@ -526,73 +327,56 @@ npm install`,
 
               {/* PANEL: Colab GPU Proxy */}
               {activeTab === "colab" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
-                        3. Colab AI GPU Runtime Proxy
-                      </h2>
-                      <span style={{ background: "var(--bg-soft)", border: "1px solid var(--line)", padding: "2px 8px", borderRadius: 3, fontSize: 9, fontWeight: 700, color: "var(--text-strong)", textTransform: "uppercase" }}>
-                        Highly Recommended
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginTop: 6 }}>
-                      Evaluating coding responses and transcribing voice records with Whisper is computationally heavy.
-                      The project includes a Google Colab notebook that hosts these pipelines on a free T4 GPU and tunnels it to your local environment.
+                    <h2 style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
+                      3. Colab AI GPU Proxy
+                    </h2>
+                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
+                      Whisper speech and LLM generation require a GPU. Run the free Colab notebook and map the proxy URL to your local setup.
                     </p>
                   </div>
 
-                  {/* Flow list */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     {[
                       {
-                        title: "Open the Colab Notebook (Inverviewa.ipynb)",
-                        desc: "Locate the 'Inverviewa.ipynb' file in the root folder of your project and upload it to Colab, or open the online repository version directly using the link below. Ensure you select a GPU runtime (Runtime -> Change runtime type -> T4 GPU).",
+                        title: "Open the Colab Notebook",
+                        desc: "Upload 'Inverviewa.ipynb' from the project root directory to Google Colab, and select a GPU runtime (T4 GPU).",
                         link: "https://colab.research.google.com/github/sh78ba/mockmate/blob/main/Inverviewa.ipynb"
                       },
                       {
-                        title: "Execute the proxy cells",
-                        desc: "Run all cells in the notebook. This fetches the Whisper speech pipeline and starts an Ngrok/localtunnel proxy forwarding backend requests.",
+                        title: "Execute Cells",
+                        desc: "Run the cells to fetch models and initiate the Ngrok tunnel proxy.",
                         link: null
                       },
                       {
-                        title: "Copy the endpoint URL",
-                        desc: "Once running, the final cells output a line looking like AI_SERVICE_URL=https://xxxx.ngrok-free.app (or similar proxy URL). Copy this URL.",
-                        link: null
-                      },
-                      {
-                        title: "Save in backend/.env",
-                        desc: "Paste that copied URL as the ai_service_url value inside your backend/.env file, then start/restart your backend server.",
+                        title: "Copy the endpoint URL & Save",
+                        desc: "Copy the generated AI_SERVICE_URL ngrok link, and save it in backend/.env under ai_service_url.",
                         link: null
                       }
                     ].map((step, idx) => (
-                      <div key={idx} style={{ display: "flex", gap: 12 }}>
+                      <div key={idx} style={{ display: "flex", gap: 8 }}>
                         <span style={{ 
                           display: "inline-flex", 
-                          width: 22, 
-                          height: 22, 
+                          width: 18, 
+                          height: 18, 
                           borderRadius: "50%", 
                           border: "1px solid #111", 
                           alignItems: "center", 
                           justifyContent: "center", 
-                          fontSize: 11, 
+                          fontSize: 10, 
                           fontWeight: 700,
                           flexShrink: 0,
-                          background: "white",
-                          color: "#111"
+                          background: "white"
                         }}>
                           {idx + 1}
                         </span>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)" }}>
-                            {step.title}
-                          </div>
-                          <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.4, marginTop: 2 }}>
-                            {step.desc}
-                          </p>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)" }}>{step.title}</div>
+                          <p style={{ fontSize: 10, color: "var(--muted)", lineHeight: 1.4 }}>{step.desc}</p>
                           {step.link && (
-                            <a href={step.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "var(--text-strong)", marginTop: 4, textDecoration: "underline" }}>
-                              Open Google Colab <ExternalLink size={10} />
+                            <a href={step.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 2, fontSize: 9, fontWeight: 700, color: "var(--text-strong)", textDecoration: "underline" }}>
+                              Open Colab <ExternalLink size={8} />
                             </a>
                           )}
                         </div>
@@ -600,11 +384,11 @@ npm install`,
                     ))}
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <button onClick={() => setActiveTab("env")} className="button-secondary" style={{ fontSize: 12 }}>
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <button onClick={() => setActiveTab("env")} className="button-secondary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Back
                     </button>
-                    <button onClick={() => setActiveTab("frontend")} className="button-primary" style={{ fontSize: 12 }}>
+                    <button onClick={() => setActiveTab("frontend")} className="button-primary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Next: Frontend Setup
                     </button>
                   </div>
@@ -613,54 +397,55 @@ npm install`,
 
               {/* PANEL: Frontend Setup */}
               {activeTab === "frontend" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   <div>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, fontFamily: "'Lora', Georgia, serif", fontStyle: "italic", color: "var(--text-strong)" }}>
                       4. Frontend Installation
                     </h2>
-                    <p style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginTop: 6 }}>
-                      The client interface is built with React and Next.js. Install dependencies and start the development server.
+                    <p style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.5, marginTop: 4 }}>
+                      The client interface runs on Next.js. Install dependencies and start the dev server.
                     </p>
                   </div>
 
-                  {/* Step 4.1 */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ display: "inline-flex", width: 18, height: 18, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>1</span>
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", width: 16, height: 16, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700 }}>1</span>
                       Install Node Modules
                     </h4>
                     <TerminalBlock code={codeBlocks.frontendDeps} id="npm-install" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
                   </div>
 
-                  {/* Step 4.2 */}
                   <div>
-                    <h4 style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ display: "inline-flex", width: 18, height: 18, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>2</span>
+                    <h4 style={{ fontSize: 11, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ display: "inline-flex", width: 16, height: 16, borderRadius: "50%", border: "1px solid #111", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700 }}>2</span>
                       Start Dev Server
                     </h4>
                     <TerminalBlock code={codeBlocks.frontendStart} id="npm-dev" onCopy={copyToClipboard} copiedBlock={copiedBlock} />
-                    <p style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, lineHeight: 1.4 }}>
-                      This starts the dev node server, hosting the page at <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit", fontWeight: 700 }}>http://localhost:3000</a>.
-                    </p>
                   </div>
 
-                  <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <button onClick={() => setActiveTab("colab")} className="button-secondary" style={{ fontSize: 12 }}>
+                  <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <button onClick={() => setActiveTab("colab")} className="button-secondary" style={{ padding: "6px 12px", fontSize: 11 }}>
                       Back
                     </button>
-                    <Link href="/dashboard" className="button-primary" style={{ fontSize: 12 }}>
-                      Finish & Go to Dashboard <Play size={12} fill="white" />
+                    <Link href="/dashboard" className="button-primary" style={{ padding: "6px 12px", fontSize: 11 }}>
+                      Finish & Go to Dashboard <Play size={10} fill="white" />
                     </Link>
                   </div>
                 </div>
               )}
 
             </div>
-
           </div>
 
-        </section>
+        </div>
       </main>
+
+      <style>{`
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </>
   );
 }
@@ -713,7 +498,8 @@ function TerminalBlock({ code, id, onCopy, copiedBlock }: { code: string, id: st
             lineHeight: 1.5,
             color: "var(--text-strong)",
             overflowX: "auto",
-            background: "#ffffff"
+            background: "#ffffff",
+            margin: 0
           }}
         >
           <code>{code}</code>

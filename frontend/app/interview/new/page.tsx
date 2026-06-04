@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { 
   Laptop, Server, Layers, Settings, BrainCircuit, 
   User, Shield, Award, Award as StaffIcon,
-  CheckCircle, FileText, Briefcase, Upload, AlertCircle, Play
+  CheckCircle, FileText, Upload, AlertCircle
 } from "lucide-react";
 
 const ROLES = [
@@ -75,83 +75,41 @@ export default function NewInterview() {
   return (
     <>
       <Navbar />
-      <main className="page-container" style={{ paddingTop: 32 }}>
-        <section className="hero-section" style={{ alignItems: "start" }}>
-          {/* Side Info Cards */}
-          <div
-            className="surface"
-            style={{ padding: 28, position: "sticky", top: 96, display: "flex", flexDirection: "column", gap: 20, borderRadius: 8 }}
-          >
-            <div>
-              <span className="page-kicker">Interview setup</span>
-              <h1
-                className="page-title"
-                style={{ fontSize: "clamp(26px, 3.5vw, 38px)", marginTop: 10 }}
-              >
-                Build the round you actually <span>want to practice</span>.
-              </h1>
-              <p
-                className="page-subtitle"
-                style={{ fontSize: 14, marginTop: 10, lineHeight: 1.6 }}
-              >
-                Choose target role, experience level, and round focus. Provide optional 
-                background specs to calibrate the AI model's questioning.
-              </p>
+      <main style={{ 
+        minHeight: "calc(100vh - 72px)", 
+        display: "flex", 
+        alignItems: "flex-start", 
+        justifyContent: "center", 
+        padding: "40px 16px",
+        background: "var(--bg-soft)",
+        boxSizing: "border-box"
+      }}>
+        <div className="surface" style={{ width: "100%", maxWidth: 1120, padding: "20px 24px", borderRadius: 12 }}>
+          {/* Header */}
+          <div style={{ marginBottom: 16 }}>
+            <span className="page-kicker" style={{ fontSize: 11, padding: "2px 6px" }}>Interview setup</span>
+            <div
+              style={{ fontSize: 9, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 8, marginBottom: 2 }}
+            >
+              CREATE A NEW SESSION
             </div>
-
-            <div className="stack" style={{ gap: 10 }}>
-              {[
-                {
-                  title: "Role-Aware Questions",
-                  body: "The AI agent generates questions matching actual industry standards for Frontend, ML, backend and DevOps.",
-                  icon: <Briefcase size={14} color="#111" />
-                },
-                {
-                  title: "Configurable Segments",
-                  body: "Target single or multiple rounds—from coding syntax reviews to high-level system design.",
-                  icon: <Settings size={14} color="#111" />
-                },
-                {
-                  title: "Resume Calibration",
-                  body: "Uploading a resume instructs the interviewer to probe details of your real-world experience.",
-                  icon: <FileText size={14} color="#111" />
-                },
-              ].map((itemData) => (
-                <div
-                  key={itemData.title}
-                  className="surface-strong card-hover"
-                  style={{ padding: 14, display: "flex", gap: 12, borderRadius: 6 }}
-                >
-                  <div style={{ marginTop: 2 }}>{itemData.icon}</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", fontFamily: "'Lora', Georgia, serif", fontStyle: "italic" }}>
-                      {itemData.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--text)", lineHeight: 1.4 }}>
-                      {itemData.body}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h1 className="section-title" style={{ fontSize: 22 }}>New interview</h1>
+            <p
+              style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, lineHeight: 1.4 }}
+            >
+              Configure your practice session. Upload a resume or paste a job description to calibrate questions.
+            </p>
           </div>
 
-          {/* Form */}
-          <div className="surface" style={{ padding: 28, borderRadius: 8 }}>
-            <div style={{ marginBottom: 20 }}>
-              <div
-                style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 4 }}
-              >
-                CREATE A NEW SESSION
-              </div>
-              <h2 className="section-title">New interview</h2>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          {/* Setup Fields */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            
+            {/* Row 1: Role & Experience Level */}
+            <div className="setup-grid">
               {/* Target Role */}
               <div>
-                <label className="field-label">Role</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 8 }}>
+                <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>Role</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
                   {ROLES.map((r) => {
                     const Icon = r.icon;
                     const active = role === r.key;
@@ -161,19 +119,20 @@ export default function NewInterview() {
                         onClick={() => setRole(r.key)}
                         className="surface-strong"
                         style={{
-                          padding: "10px 8px",
+                          padding: "8px 6px",
                           borderRadius: 6,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 8,
+                          gap: 6,
+                          gridColumn: r.key === "ml" ? "span 2" : "auto",
                           border: active ? "1px solid #111111" : "1px solid var(--line)",
                           background: active ? "var(--bg-soft)" : "var(--panel-strong)",
                           color: "var(--text-strong)",
                         }}
                       >
-                        <Icon size={16} color={active ? "#111111" : "#777777"} />
-                        <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{r.label}</span>
+                        <Icon size={14} color={active ? "#111111" : "#777777"} />
+                        <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{r.label}</span>
                       </button>
                     );
                   })}
@@ -182,8 +141,8 @@ export default function NewInterview() {
 
               {/* Experience Level */}
               <div>
-                <label className="field-label">Experience level</label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8 }}>
+                <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>Experience level</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 }}>
                   {LEVELS.map((l) => {
                     const Icon = l.icon;
                     const active = level === l.key;
@@ -193,58 +152,61 @@ export default function NewInterview() {
                         onClick={() => setLevel(l.key)}
                         className="surface-strong"
                         style={{
-                          padding: "10px 8px",
+                          padding: "8px 6px",
                           borderRadius: 6,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 8,
+                          gap: 6,
                           border: active ? "1px solid #111111" : "1px solid var(--line)",
                           background: active ? "var(--bg-soft)" : "var(--panel-strong)",
                           color: "var(--text-strong)",
                         }}
                       >
-                        <Icon size={14} color={active ? "#111111" : "#777777"} />
-                        <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{l.label}</span>
+                        <Icon size={12} color={active ? "#111111" : "#777777"} />
+                        <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{l.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
+            </div>
 
-              {/* Rounds */}
-              <div>
-                <label className="field-label">Rounds</label>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {ROUNDS.map((r) => {
-                    const active = selectedRounds.includes(r.key);
-                    return (
-                      <button
-                        key={r.key}
-                        onClick={() => toggleRound(r.key)}
-                        className={active ? "chip chip-active" : "chip"}
-                        style={{
-                          padding: "8px 14px",
-                          fontSize: 12,
-                          borderRadius: 4,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                          border: active ? "1px solid #111111" : "1px solid var(--line)",
-                        }}
-                      >
-                        {active && <CheckCircle size={12} color="white" />}
-                        <span style={{ fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{r.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+            {/* Rounds */}
+            <div>
+              <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>Rounds</label>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {ROUNDS.map((r) => {
+                  const active = selectedRounds.includes(r.key);
+                  return (
+                    <button
+                      key={r.key}
+                      onClick={() => toggleRound(r.key)}
+                      className={active ? "chip chip-active" : "chip"}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: 11,
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        border: active ? "1px solid #111111" : "1px solid var(--line)",
+                      }}
+                    >
+                      {active && <CheckCircle size={10} color="white" />}
+                      <span style={{ fontFamily: active ? "'Lora', Georgia, serif" : "inherit", fontStyle: active ? "italic" : "normal" }}>{r.label}</span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
+            {/* Row 2: Resume & Job Description */}
+            <div className="setup-grid">
               {/* Resume File Upload */}
               <div>
-                <label className="field-label">
+                <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>
                   Resume{" "}
                   <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span>
                 </label>
@@ -253,11 +215,15 @@ export default function NewInterview() {
                   style={{ 
                     border: "1px dashed var(--line)", 
                     borderRadius: 6, 
-                    padding: 16, 
+                    padding: 12, 
                     textAlign: "center",
                     position: "relative",
                     background: "rgba(0, 0, 0, 0.01)",
-                    transition: "all 0.15s ease"
+                    height: "82px",
+                    minHeight: "82px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
                   }}
                 >
                   <input
@@ -275,72 +241,72 @@ export default function NewInterview() {
                       zIndex: 10
                     }}
                   />
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-                    <div style={{ 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: "50%", 
-                      background: "rgba(0,0,0,0.02)", 
-                      display: "flex", 
-                      alignItems: "center", 
-                      justifyContent: "center",
-                      color: "#111"
-                    }}>
-                      <Upload size={16} />
-                    </div>
-                    <div>
-                      <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-strong)" }}>
-                        {resume ? resume.name : "Click or drag PDF file here"}
-                      </p>
-                    </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <Upload size={14} color="#777" />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-strong)", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {resume ? resume.name : "Upload resume (PDF)"}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Job Description */}
               <div>
-                <label className="field-label">
+                <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>
                   Job description{" "}
                   <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span>
                 </label>
                 <textarea
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
-                  rows={4}
                   placeholder="Paste the job description here..."
                   className="textarea"
-                  style={{ fontSize: 13, lineHeight: 1.6 }}
+                  style={{ fontSize: 12, lineHeight: 1.4, padding: "8px 12px", height: "82px", minHeight: "82px", resize: "none" }}
                 />
               </div>
-
-              {error && (
-                <div style={{ 
-                  display: "flex", 
-                  gap: 8, 
-                  alignItems: "center", 
-                  color: "var(--text-strong)", 
-                  background: "var(--bg-soft)",
-                  border: "1px solid var(--accent-strong)",
-                  padding: "10px 14px",
-                  borderRadius: 6
-                }}>
-                  <AlertCircle size={14} />
-                  <span style={{ fontSize: 12, fontWeight: 500 }}>{error}</span>
-                </div>
-              )}
-
-              <button
-                onClick={submit}
-                disabled={loading}
-                className="button-primary"
-                style={{ width: "100%", padding: "12px 18px", fontSize: 14 }}
-              >
-                {loading ? "Setting up interview..." : "Start interview"}
-              </button>
             </div>
+
+            {error && (
+              <div style={{ 
+                display: "flex", 
+                gap: 8, 
+                alignItems: "center", 
+                color: "var(--text-strong)", 
+                background: "var(--bg-soft)",
+                border: "1px solid var(--accent-strong)",
+                padding: "8px 12px",
+                borderRadius: 6
+              }}>
+                <AlertCircle size={14} />
+                <span style={{ fontSize: 11, fontWeight: 500 }}>{error}</span>
+              </div>
+            )}
+
+            <button
+              onClick={submit}
+              disabled={loading}
+              className="button-primary"
+              style={{ width: "100%", padding: "10px 16px", fontSize: 13 }}
+            >
+              {loading ? "Setting up interview..." : "Start interview"}
+            </button>
           </div>
-        </section>
+        </div>
       </main>
+
+      <style>{`
+        .setup-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        @media (max-width: 640px) {
+          .setup-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

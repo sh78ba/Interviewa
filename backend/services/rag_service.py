@@ -53,3 +53,13 @@ def _chunk(text: str, size: int = 400, overlap: int = 50) -> list[str]:
             chunks.append(chunk)
         start += size - overlap
     return chunks
+
+async def delete_resume(interview_id: str):
+    """Delete ChromaDB collection for this interview."""
+    try:
+        chroma_client = _get_client()
+        if chroma_client is None:
+            return
+        chroma_client.delete_collection(f"interview_{interview_id}")
+    except Exception:
+        pass
