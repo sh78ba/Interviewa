@@ -10,7 +10,7 @@ def parse_pdf(file_path: str) -> str:
     doc.close()
     return text.strip()
 
-async def extract_profile(resume_text: str, role: str, level: str) -> dict:
+async def extract_profile(resume_text: str, role: str, level: str, ai_service_url: str = None, groq_api_key: str = None) -> dict:
     prompt = f"""
 You are an expert technical recruiter.
 
@@ -40,7 +40,7 @@ Return ONLY valid JSON:
 
 Return ONLY the JSON. No explanation.
 """
-    raw = await llm(prompt, task="resume_analysis")
+    raw = await llm(prompt, task="resume_analysis", ai_service_url=ai_service_url, groq_api_key=groq_api_key)
     raw = raw.strip()
     if "```" in raw:
         raw = raw.split("```")[1]

@@ -7,7 +7,9 @@ async def evaluate_answer(
     topic: str,
     round_name: str,
     level: str,
-    what_to_look_for: str = ""
+    what_to_look_for: str = "",
+    ai_service_url: str = None,
+    groq_api_key: str = None
 ) -> dict:
 
     is_behavioral = round_name.lower() in ["hr", "cultural", "behavioural", "behavioral"]
@@ -26,46 +28,50 @@ Check which of these four elements are present, missing, or weak. In the feedbac
     prompt = f"""
 You are a strict but fair senior engineer evaluating an interview answer.
 
-Score ONLY the candidate's actual answer to the question below.
-Do NOT reward buzzwords, vague filler, or unrelated technical topics.
-If the answer is off-topic, generic, or does not directly answer the question,
-the score MUST be low even if a few keywords are correct.
-{star_instruction}
-Use this rubric:
-- relevance (0-4): how directly the answer addresses the question
-- correctness (0-4): whether the facts/approach/behavior are accurate/appropriate
-- completeness (0-2): whether the answer is complete and specific (e.g., covers all STAR elements if behavioral)
+You are evaluating the candidate's answer to this question:
+Question: {question}
 
-The final score must be the sum of those three parts and must stay within 0-10.
-Hard rules:
-- Off-topic or mostly unrelated answers must score 0-3.
-- Answers that mention random services, filler, or different problem domains must not score above 3.
-- Partially correct but vague answers should score 4-6.
-- High scores (7-10) are only for answers that are directly relevant, accurate, and complete.
+Here is the reference criteria/expected answer details of what a strong answer should cover:
+{what_to_look_for}
 
+Candidate's Answer: {answer}
+
+Evaluation details:
 Round: {round_name}
 Topic: {topic}
 Level expected: {level}
-Question: {question}
-What to look for: {what_to_look_for}
-Candidate answer: {answer}
 
-Return ONLY valid JSON:
+CRITICAL RULES:
+1. If the candidate's answer is off-topic, completely unrelated to the question, or consists of meta-talk/test phrases (e.g., testing the microphone, testing the audio, checking if it works, "this is a test"), you MUST score it 0.
+2. If the candidate simply repeats the question back to you, or asks a question back, or slightly modifies the question without answering it, you MUST score it 0.
+3. If the candidate's answer is empty or has only filler words (e.g., "I don't know", "skip", "test"), you MUST score it 0.
+4. Do NOT reward buzzwords, vague filler, or unrelated technical topics.
+
+{star_instruction}
+
+Scoring Rubric:
+- relevance_score: integer from 0 to 4 (how directly the answer addresses the question)
+- correctness_score: integer from 0 to 4 (whether the facts/approach/behavior are accurate/appropriate)
+- completeness_score: integer from 0 to 2 (whether the answer is complete and covers expected details/STAR elements)
+- score: total score (sum of relevance_score + correctness_score + completeness_score, from 0 to 10)
+
+Return ONLY a valid JSON object. Do not include comments or markdown formatting.
+Format the JSON exactly like this:
 {{
-    "relevance_score": 3,
-    "correctness_score": 3,
-    "completeness_score": 2,
-    "score": 8,
-  "feedback": "2 sentence explanation of score and STAR alignment",
-  "strengths": "what was good",
-  "weaknesses": "what was missing",
-  "better_answer": "example of a strong answer framed using STAR method",
-  "next_difficulty": "easier|same|harder"
+  "relevance_score": [relevance score as integer 0-4],
+  "correctness_score": [correctness score as integer 0-4],
+  "completeness_score": [completeness score as integer 0-2],
+  "score": [total score as integer 0-10],
+  "feedback": "[2-sentence feedback string]",
+  "strengths": "[strengths string, or empty if score is 0]",
+  "weaknesses": "[weaknesses string]",
+  "better_answer": "[example of a strong answer]",
+  "next_difficulty": "[easier, same, or harder]"
 }}
 
 Return ONLY the JSON. No explanation.
 """
-    raw = await llm(prompt, task="answer_evaluation")
+    raw = await llm(prompt, task="answer_evaluation", ai_service_url=ai_service_url, groq_api_key=groq_api_key)
     raw = raw.strip()
     if "```" in raw:
         raw = raw.split("```")[1]
@@ -77,6 +83,24 @@ Return ONLY the JSON. No explanation.
         correctness = int(parsed.get("correctness_score", 0) or 0)
         completeness = int(parsed.get("completeness_score", 0) or 0)
         score = int(parsed.get("score", relevance + correctness + completeness) or 0)
+
+        # Python-level guardrails: prevent unrelated/meta-test answers from getting high scores
+        cleaned_ans = answer.strip().lower()
+        if (
+            not cleaned_ans 
+            or "test the microphone" in cleaned_ans 
+            or "testing the microphone" in cleaned_ans 
+            or "is it working" in cleaned_ans
+            or "microphone working" in cleaned_ans
+            or cleaned_ans == "test"
+        ):
+            relevance = 0
+            correctness = 0
+            completeness = 0
+            score = 0
+            parsed["feedback"] = "The candidate did not provide a valid answer to the question (meta-talk/test phrase detected)."
+            parsed["strengths"] = ""
+            parsed["weaknesses"] = "Unanswered/unrelated audio test phrase."
 
         # Guardrail: prevent unrelated answers from getting inflated scores.
         if relevance <= 1:
@@ -103,7 +127,12 @@ Return ONLY the JSON. No explanation.
         }
 
 
-async def generate_report(profile: dict, all_answers: list[dict]) -> dict:
+async def generate_report(
+    profile: dict,
+    all_answers: list[dict],
+    ai_service_url: str = None,
+    groq_api_key: str = None
+) -> dict:
     prompt = f"""
 You are a hiring manager reviewing a completed technical interview.
 
@@ -132,7 +161,7 @@ Return ONLY valid JSON:
 
 Return ONLY the JSON. No explanation.
 """
-    raw = await llm(prompt, task="report")
+    raw = await llm(prompt, task="report", ai_service_url=ai_service_url, groq_api_key=groq_api_key)
     raw = raw.strip()
     if "```" in raw:
         raw = raw.split("```")[1]

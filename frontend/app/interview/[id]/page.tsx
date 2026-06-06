@@ -67,6 +67,10 @@ export default function InterviewRoom() {
   const speak = useCallback(async (text: string): Promise<void> => {
     return new Promise(async (resolve) => {
       try {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
         const res = await api.post(
           "/api/speech/speak",
           { text },
@@ -290,6 +294,15 @@ export default function InterviewRoom() {
 
   // ── End interview manually ────────────────────────────────────────────────
   const endInterview = useCallback(async () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (mediaRef.current?.state === "recording") {
+      try {
+        mediaRef.current.stop();
+      } catch {}
+    }
     try {
       await api.post(`/api/interview/${id}/end`);
       setPhase("done");

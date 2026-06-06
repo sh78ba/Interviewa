@@ -17,7 +17,7 @@ def _get_client():
         client = None
     return client
 
-async def ingest_resume(interview_id: str, resume_text: str):
+async def ingest_resume(interview_id: str, resume_text: str, ai_service_url: str = None):
     """Chunk resume, embed, store in ChromaDB."""
     chroma_client = _get_client()
     if chroma_client is None:
@@ -25,21 +25,21 @@ async def ingest_resume(interview_id: str, resume_text: str):
     chunks = _chunk(resume_text)
     collection = chroma_client.get_or_create_collection(f"interview_{interview_id}")
     for i, chunk in enumerate(chunks):
-        embedding = await embed(chunk)
+        embedding = await embed(chunk, ai_service_url=ai_service_url)
         collection.add(
             ids=[f"chunk_{i}"],
             embeddings=[embedding],
             documents=[chunk]
         )
 
-async def search_resume(interview_id: str, query: str, top_k: int = 3) -> str:
+async def search_resume(interview_id: str, query: str, top_k: int = 3, ai_service_url: str = None) -> str:
     """Search resume chunks relevant to a query."""
     try:
         chroma_client = _get_client()
         if chroma_client is None:
             return ""
         collection = chroma_client.get_collection(f"interview_{interview_id}")
-        query_emb = await embed(query)
+        query_emb = await embed(query, ai_service_url=ai_service_url)
         results = collection.query(query_embeddings=[query_emb], n_results=top_k)
         return "\n".join(results["documents"][0])
     except Exception:

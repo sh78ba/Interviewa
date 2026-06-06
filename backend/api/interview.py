@@ -11,6 +11,7 @@ from services.resume_service import parse_pdf, extract_profile
 from services.rag_service import ingest_resume, search_resume, delete_resume
 from services.question_service import generate_questions, ROUND_CONFIGS
 from services.evaluation_service import evaluate_answer, generate_report
+from api.dependencies import get_user_session, get_ai_credentials
 
 router = APIRouter(prefix="/api/interview", tags=["interview"])
 UPLOAD_DIR = "uploads"
@@ -25,9 +26,10 @@ async def start_interview(
     rounds: str = Form(...),           # comma-separated e.g. "resume,technical,hr"
     job_description: str = Form(""),
     resume: Optional[UploadFile] = File(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session),
+    creds: dict = Depends(get_ai_credentials)
 ):
-    user_id = "local"
     resume_text = ""
     profile = {}
 
@@ -40,7 +42,13 @@ async def start_interview(
         finally:
             if os.path.exists(path):
                 os.remove(path)
-        profile = await extract_profile(resume_text, role, level)
+        profile = await extract_profile(
+            resume_text,
+            role,
+            level,
+            ai_service_url=creds["ai_service_url"],
+            groq_api_key=creds["groq_api_key"]
+        )
 
     profile["role"] = role
     profile["level"] = level
@@ -48,7 +56,7 @@ async def start_interview(
     rounds_list = [r.strip() for r in rounds.split(",")]
 
     interview = Interview(
-        user_id="local",
+        user_id=user_id,
         role=role,
         level=level,
         rounds=rounds_list,
@@ -65,7 +73,15 @@ async def start_interview(
     # Generate questions for all rounds
     order = 0
     for round_index, round_key in enumerate(rounds_list):
-        questions = await generate_questions(round_key, role, level, profile, job_description)
+        questions = await generate_questions(
+            round_key,
+            role,
+            level,
+            profile,
+            job_description,
+            ai_service_url=creds["ai_service_url"],
+            groq_api_key=creds["groq_api_key"]
+        )
         for q in questions:
             db.add(Question(
                 interview_id=interview.id,
@@ -81,7 +97,7 @@ async def start_interview(
             order += 1
 
     if resume_text:
-        await ingest_resume(interview.id, resume_text)
+        await ingest_resume(interview.id, resume_text, ai_service_url=creds["ai_service_url"])
 
     await db.commit()
     return {
@@ -96,9 +112,14 @@ async def start_interview(
 @router.get("/{interview_id}/next")
 async def next_question(
     interview_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session)
 ):
-    result = await db.execute(select(Interview).where(Interview.id == interview_id))
+    result = await db.execute(
+        select(Interview)
+        .where(Interview.id == interview_id)
+        .where(Interview.user_id == user_id)
+    )
     iv = result.scalar_one_or_none()
     if not iv:
         raise HTTPException(404, "Interview not found")
@@ -121,7 +142,7 @@ async def next_question(
         iv.current_round += 1
         iv.current_question_index = 0
         await db.commit()
-        return await next_question(interview_id, db)
+        return await next_question(interview_id, db=db, user_id=user_id)
 
     q = questions[iv.current_question_index]
 
@@ -155,15 +176,23 @@ class AnswerRequest(BaseModel):
 async def submit_answer(
     interview_id: str,
     req: AnswerRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session),
+    creds: dict = Depends(get_ai_credentials)
 ):
     result = await db.execute(select(Question).where(Question.id == req.question_id))
     q = result.scalar_one_or_none()
     if not q:
         raise HTTPException(404, "Question not found")
 
-    result = await db.execute(select(Interview).where(Interview.id == interview_id))
+    result = await db.execute(
+        select(Interview)
+        .where(Interview.id == interview_id)
+        .where(Interview.user_id == user_id)
+    )
     iv = result.scalar_one_or_none()
+    if not iv:
+        raise HTTPException(404, "Interview not found")
 
     answer_text = req.answer_text
     if req.code:
@@ -185,7 +214,9 @@ async def submit_answer(
             topic=q.topic,
             round_name=q.round_name,
             level=iv.extracted_profile.get("level", "mid"),
-            what_to_look_for=q.what_to_look
+            what_to_look_for=q.what_to_look,
+            ai_service_url=creds["ai_service_url"],
+            groq_api_key=creds["groq_api_key"]
         )
 
     db.add(Answer(
@@ -215,9 +246,14 @@ async def submit_answer(
 @router.post("/{interview_id}/end")
 async def end_interview(
     interview_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session)
 ):
-    result = await db.execute(select(Interview).where(Interview.id == interview_id))
+    result = await db.execute(
+        select(Interview)
+        .where(Interview.id == interview_id)
+        .where(Interview.user_id == user_id)
+    )
     iv = result.scalar_one_or_none()
     if not iv:
         raise HTTPException(404, "Interview not found")
@@ -253,9 +289,15 @@ async def end_interview(
 @router.get("/{interview_id}/report")
 async def get_report(
     interview_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session),
+    creds: dict = Depends(get_ai_credentials)
 ):
-    result = await db.execute(select(Interview).where(Interview.id == interview_id))
+    result = await db.execute(
+        select(Interview)
+        .where(Interview.id == interview_id)
+        .where(Interview.user_id == user_id)
+    )
     iv = result.scalar_one_or_none()
     if not iv:
         raise HTTPException(404, "Not found")
@@ -275,7 +317,12 @@ async def get_report(
             "feedback": a.feedback
         })
 
-    report_data = await generate_report(iv.extracted_profile, all_answers)
+    report_data = await generate_report(
+        iv.extracted_profile,
+        all_answers,
+        ai_service_url=creds["ai_service_url"],
+        groq_api_key=creds["groq_api_key"]
+    )
 
     result = await db.execute(select(Report).where(Report.interview_id == interview_id))
     existing = result.scalar_one_or_none()
@@ -305,7 +352,8 @@ async def get_report(
 async def list_interviews(
     page: int = 1,
     limit: int = 5,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session)
 ):
     page = max(page, 1)
     limit = max(min(limit, 20), 1)
@@ -313,11 +361,13 @@ async def list_interviews(
     total_result = await db.execute(
         select(func.count())
         .select_from(Interview)
+        .where(Interview.user_id == user_id)
     )
     total = total_result.scalar_one() or 0
 
     result = await db.execute(
         select(Interview)
+        .where(Interview.user_id == user_id)
         .order_by(Interview.created_at.desc())
         .offset((page - 1) * limit)
         .limit(limit)
@@ -347,11 +397,13 @@ async def list_interviews(
 @router.delete("/{interview_id}")
 async def delete_interview(
     interview_id: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session)
 ):
     result = await db.execute(
         select(Interview)
         .where(Interview.id == interview_id)
+        .where(Interview.user_id == user_id)
     )
     interview = result.scalar_one_or_none()
     if not interview:

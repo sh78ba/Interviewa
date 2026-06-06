@@ -58,7 +58,9 @@ async def generate_questions(
     role: str,
     level: str,
     profile: dict,
-    job_description: str = ""
+    job_description: str = "",
+    ai_service_url: str = None,
+    groq_api_key: str = None
 ) -> list[dict]:
 
     cfg = ROUND_CONFIGS.get(round_key, ROUND_CONFIGS["technical"])
@@ -124,7 +126,7 @@ Return ONLY a valid JSON array:
 
 Return ONLY the JSON array. No explanation. No markdown.
 """
-    raw = await llm(prompt, task=cfg["task"])
+    raw = await llm(prompt, task=cfg["task"], ai_service_url=ai_service_url, groq_api_key=groq_api_key)
     questions = _parse(raw)
 
     # Fallback if parsing fails
