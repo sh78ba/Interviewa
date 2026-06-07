@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    ai_service_url: str
+    ai_service_url: str = ""
     database_url: str
     redis_url: str
     groq_api_key: str = ""
