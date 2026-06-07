@@ -133,30 +133,53 @@ async def generate_report(
     ai_service_url: str = None,
     groq_api_key: str = None
 ) -> dict:
+    # 1. Calculate scores programmatically to guarantee mathematical accuracy
+    round_scores = {}
+    round_counts = {}
+    for a in all_answers:
+        r_name = a.get("round", "technical")
+        score = float(a.get("score", 0.0) or 0.0)
+        round_scores[r_name] = round_scores.get(r_name, 0.0) + score
+        round_counts[r_name] = round_counts.get(r_name, 0) + 1
+
+    scores_by_round = {}
+    total_score = 0.0
+    total_questions = 0
+    for r_name, r_score in round_scores.items():
+        count = round_counts[r_name]
+        percentage = round((r_score / (count * 10.0)) * 100.0, 1)
+        scores_by_round[r_name] = percentage
+        total_score += r_score
+        total_questions += count
+
+    overall_score = 0.0
+    if total_questions > 0:
+        overall_score = round((total_score / (total_questions * 10.0)) * 100.0, 1)
+
+    # 2. Get qualitative analysis from the LLM
     prompt = f"""
 You are a hiring manager reviewing a completed technical interview.
 
 Candidate: {profile.get('candidate_name', 'Unknown')}
-Role applied: {profile.get('role', '')}
+Role: {profile.get('role', '')}
 Level: {profile.get('level', '')}
 
 Interview answers and scores:
 {json.dumps(all_answers[:20], indent=2)}
 
-Generate a final hiring report.
+Calculated Metrics (Do NOT change these):
+Overall Score: {overall_score}
+Scores by Round: {json.dumps(scores_by_round)}
 
-Return ONLY valid JSON:
+Generate a final hiring report summarizing their strengths, weaknesses, and a recommendation.
+If the overall score is low (e.g. below 50), the recommendation should be 'no' or 'maybe' and the summary should reflect their performance.
+
+Return ONLY valid JSON in this exact structure:
 {{
-  "scores_by_round": {{
-    "dsa": 72.0,
-    "technical": 68.0,
-    "hr": 80.0
-  }},
-  "overall_score": 73.0,
-  "strengths": ["strength1", "strength2", "strength3"],
-  "weaknesses": ["weakness1", "weakness2"],
+  "strengths": ["list of 2-3 strengths, or warning if score is low"],
+  "weaknesses": ["list of weaknesses"],
   "recommendation": "strong_yes|yes|maybe|no",
-  "summary": "3-4 sentence overall assessment"
+  "summary": "3-4 sentence overall assessment reflecting their actual performance and scores"
 }}
 
 Return ONLY the JSON. No explanation.
@@ -168,13 +191,20 @@ Return ONLY the JSON. No explanation.
         if raw.startswith("json"):
             raw = raw[4:]
     try:
-        return json.loads(raw.strip())
+        parsed = json.loads(raw.strip())
     except Exception:
-        return {
-            "scores_by_round": {},
-            "overall_score": 0,
-            "strengths": [],
-            "weaknesses": [],
-            "recommendation": "maybe",
-            "summary": "Could not generate report"
-        }
+        parsed = {}
+
+    # 3. Force mathematical scores into the response
+    parsed["scores_by_round"] = scores_by_round
+    parsed["overall_score"] = overall_score
+    if "strengths" not in parsed or not isinstance(parsed["strengths"], list):
+        parsed["strengths"] = ["Terminated early" if overall_score == 0 else "N/A"]
+    if "weaknesses" not in parsed or not isinstance(parsed["weaknesses"], list):
+        parsed["weaknesses"] = ["Incomplete answers" if overall_score == 0 else "N/A"]
+    if "recommendation" not in parsed:
+        parsed["recommendation"] = "no" if overall_score < 50 else "maybe"
+    if "summary" not in parsed:
+        parsed["summary"] = "Interview assessment complete."
+
+    return parsed
