@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     groq_api_key: str = ""
+    cors_origins: str = "http://localhost:3000"
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""
     chroma_host: str = "localhost"
