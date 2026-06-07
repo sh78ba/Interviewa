@@ -43,6 +43,19 @@ export default function NewInterview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [aiServiceUrl, setAiServiceUrl] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("ai_service_url") || "";
+    }
+    return "";
+  });
+  const [groqApiKey, setGroqApiKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("groq_api_key") || "";
+    }
+    return "";
+  });
+
   const toggleRound = (key: string) => {
     setSelectedRounds((prev) =>
       prev.includes(key) ? prev.filter((r) => r !== key) : [...prev, key],
@@ -54,9 +67,30 @@ export default function NewInterview() {
       setError("Please select at least one interview round.");
       return;
     }
+
+    // Validate that we have at least one AI service URL or Groq Key when hosted
+    const isHosted = typeof window !== "undefined" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1";
+    if (isHosted && !aiServiceUrl.trim() && !groqApiKey.trim()) {
+      setError("Please configure your Colab GPU / Ngrok URL or Groq API Key to start the interview on a hosted environment.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
+      if (typeof window !== "undefined") {
+        if (aiServiceUrl.trim()) {
+          localStorage.setItem("ai_service_url", aiServiceUrl.trim());
+        } else {
+          localStorage.removeItem("ai_service_url");
+        }
+        if (groqApiKey.trim()) {
+          localStorage.setItem("groq_api_key", groqApiKey.trim());
+        } else {
+          localStorage.removeItem("groq_api_key");
+        }
+      }
+
       const form = new FormData();
       form.append("role", role);
       form.append("level", level);
@@ -263,6 +297,46 @@ export default function NewInterview() {
                   className="textarea"
                   style={{ fontSize: 12, lineHeight: 1.4, padding: "8px 12px", height: "82px", minHeight: "82px", resize: "none" }}
                 />
+              </div>
+            </div>
+
+            {/* AI Calibration Settings (Required when Hosted) */}
+            <div style={{ 
+              marginTop: 4, 
+              padding: "16px 20px", 
+              borderRadius: 8, 
+              border: "1px solid var(--line)", 
+              background: "rgba(0, 0, 0, 0.01)" 
+            }}>
+              <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
+                AI Service Configuration
+              </h4>
+              <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.4 }}>
+                To run the speech transcription and LLM evaluation, specify your Google Colab Ngrok tunnel URL or your Groq API Key. Leaving both blank will default to the hosted server's local configuration.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+                <div>
+                  <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Colab GPU / Ngrok Service URL</label>
+                  <input
+                    type="text"
+                    value={aiServiceUrl}
+                    onChange={(e) => setAiServiceUrl(e.target.value)}
+                    placeholder="https://xxxx.ngrok-free.app"
+                    className="input"
+                    style={{ fontSize: 12, padding: "8px 12px" }}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Groq API Key (Optional Fallback)</label>
+                  <input
+                    type="password"
+                    value={groqApiKey}
+                    onChange={(e) => setGroqApiKey(e.target.value)}
+                    placeholder="gsk_..."
+                    className="input"
+                    style={{ fontSize: 12, padding: "8px 12px" }}
+                  />
+                </div>
               </div>
             </div>
 
