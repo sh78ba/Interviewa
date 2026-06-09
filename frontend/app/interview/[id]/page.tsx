@@ -210,22 +210,20 @@ export default function InterviewRoom() {
     setPhase("processing");
     setStatusText("Transcribing your answer...");
 
+    let text = "";
     try {
       // Step 1 — transcribe audio
       const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       const form = new FormData();
       form.append("audio", blob, "audio.webm");
       const transcribeRes = await api.post("/api/speech/transcribe", form);
-      const text = transcribeRes.data.text || "";
+      text = transcribeRes.data.text || "";
       setTranscript(text);
+    } catch (e) {
+      console.error("Transcription failed, falling back to empty response", e);
+    }
 
-      if (!text.trim()) {
-        setStatusText("Didn't catch that. Let's try again.");
-        await speak("I didn't catch that. Please try again.");
-        await startListeningRef.current?.();
-        return;
-      }
-
+    try {
       // Step 2 — evaluate answer
       setStatusText("Recording your answer...");
       await api.post(`/api/interview/${id}/answer`, {
@@ -244,7 +242,7 @@ export default function InterviewRoom() {
       await new Promise((r) => setTimeout(r, 2000));
       await fetchAndSpeakRef.current?.();
     }
-  }, [question, id, speak]);
+  }, [question, id]);
 
   useEffect(() => {
     fetchAndSpeakRef.current = fetchAndSpeak;
