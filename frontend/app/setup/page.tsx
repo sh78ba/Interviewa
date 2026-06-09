@@ -72,7 +72,10 @@ npm install`,
             gap: 8, 
             borderBottom: "1px solid var(--line)", 
             paddingBottom: 0,
-            marginBottom: 20
+            marginBottom: 20,
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none"
           }}>
             {[
               { path: "/setup", label: "1. Instructions", icon: <BookOpen size={12} /> },
@@ -96,7 +99,8 @@ npm install`,
                     color: active ? "var(--text-strong)" : "var(--muted)",
                     textDecoration: "none",
                     fontFamily: active ? "'Lora', Georgia, serif" : "inherit",
-                    fontStyle: active ? "italic" : "normal"
+                    fontStyle: active ? "italic" : "normal",
+                    whiteSpace: "nowrap"
                   }}
                 >
                   {tab.icon}
