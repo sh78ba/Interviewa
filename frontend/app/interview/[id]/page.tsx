@@ -53,10 +53,19 @@ export default function InterviewRoom() {
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentSpeechIdRef = useRef(0);
   const finalizedRef = useRef(false);
   const fetchAndSpeakRef = useRef<(() => Promise<void>) | null>(null);
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
   const processAnswerRef = useRef<(() => Promise<void>) | null>(null);
+
+  const cancelSpeech = useCallback(() => {
+    currentSpeechIdRef.current++;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+  }, []);
 
   // Sync ref with current question
   useEffect(() => {
@@ -65,6 +74,7 @@ export default function InterviewRoom() {
 
   // ── Speak text via Colab TTS ─────────────────────────────────────────────
   const speak = useCallback(async (text: string): Promise<void> => {
+    const speechId = ++currentSpeechIdRef.current;
     return new Promise(async (resolve) => {
       try {
         if (audioRef.current) {
@@ -76,6 +86,13 @@ export default function InterviewRoom() {
           { text },
           { responseType: "blob" },
         );
+        
+        // Mismatch check: if a newer speech session has started, abort this one
+        if (speechId !== currentSpeechIdRef.current) {
+          resolve();
+          return;
+        }
+
         const url = URL.createObjectURL(res.data);
         const audio = new Audio(url);
         audioRef.current = audio;
@@ -84,7 +101,11 @@ export default function InterviewRoom() {
         audio.play();
       } catch {
         // If TTS fails, just wait 2s and continue
-        setTimeout(resolve, 2000);
+        if (speechId === currentSpeechIdRef.current) {
+          setTimeout(resolve, 2000);
+        } else {
+          resolve();
+        }
       }
     });
   }, []);
@@ -182,7 +203,13 @@ export default function InterviewRoom() {
     finalizedRef.current = false;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
       const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
       chunksRef.current = [];
 
@@ -292,10 +319,7 @@ export default function InterviewRoom() {
 
   // ── End interview manually ────────────────────────────────────────────────
   const endInterview = useCallback(async () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
+    cancelSpeech();
     if (mediaRef.current?.state === "recording") {
       try {
         mediaRef.current.stop();
@@ -312,7 +336,7 @@ export default function InterviewRoom() {
       setPhase("done");
       setStatusText("Interview complete!");
     }
-  }, [id, speak]);
+  }, [id, speak, cancelSpeech]);
 
   // ── Listen for Enter key to end the interview ─────────────────────────────
   useEffect(() => {
@@ -350,7 +374,7 @@ export default function InterviewRoom() {
 
   // ── Interrupt AI and start answering ─────────────────────────────────────
   const interrupt = () => {
-    audioRef.current?.pause();
+    cancelSpeech();
     void startListeningRef.current?.();
   };
 
