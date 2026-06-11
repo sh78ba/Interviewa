@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import api from "@/lib/api";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { 
   Volume2, Mic, Play, Square, Award, Clock, ArrowLeft, 
   CheckCircle, Activity, Info, Sparkles, Terminal, ChevronRight, AlertCircle
@@ -50,14 +51,18 @@ export default function InterviewRoom() {
   const [statusText, setStatusText] = useState("Loading your interview...");
 
   const currentQuestionRef = useRef<Question | null>(null);
-  const mediaRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentSpeechIdRef = useRef(0);
   const finalizedRef = useRef(false);
   const fetchAndSpeakRef = useRef<(() => Promise<void>) | null>(null);
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
-  const processAnswerRef = useRef<(() => Promise<void>) | null>(null);
+  const processAnswerRef = useRef<((blob: Blob) => Promise<void>) | null>(null);
+
+  const onRecordingComplete = useCallback((blob: Blob) => {
+    void processAnswerRef.current?.(blob);
+  }, []);
+
+  const { startRecording, stopRecording, forceStop } = useAudioRecorder(onRecordingComplete);
 
   const cancelSpeech = useCallback(() => {
     currentSpeechIdRef.current++;
@@ -202,37 +207,15 @@ export default function InterviewRoom() {
     setTranscript("");
     finalizedRef.current = false;
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      chunksRef.current = [];
-
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      mr.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        await processAnswerRef.current?.();
-      };
-
-      mr.start();
-      mediaRef.current = mr;
-    } catch {
+    const started = await startRecording();
+    if (!started) {
       setStatusText("Microphone access denied. Please type your answer.");
       setPhase("feedback");
     }
-  }, []);
+  }, [startRecording]);
 
-  // ── Stop recording ───────────────────────────────────────────────────────
   // ── Transcribe + evaluate ────────────────────────────────────────────────
-  const processAnswer = useCallback(async () => {
+  const processAnswer = useCallback(async (blob: Blob) => {
     if (!question) return;
     setPhase("processing");
     setStatusText("Transcribing your answer...");
@@ -240,7 +223,6 @@ export default function InterviewRoom() {
     let text = "";
     try {
       // Step 1 — transcribe audio
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
       const form = new FormData();
       form.append("audio", blob, "audio.webm");
       const transcribeRes = await api.post("/api/speech/transcribe", form);
@@ -284,13 +266,8 @@ export default function InterviewRoom() {
     setPhase("processing");
     setStatusText("Wrapping up your answer...");
 
-    if (mediaRef.current && mediaRef.current.state === "recording") {
-      mediaRef.current.stop();
-      return;
-    }
-
-    void processAnswerRef.current?.();
-  }, []);
+    stopRecording();
+  }, [stopRecording]);
 
   // ── Submit coding answer manually ────────────────────────────────────────
   const submitCoding = useCallback(async () => {
@@ -320,11 +297,7 @@ export default function InterviewRoom() {
   // ── End interview manually ────────────────────────────────────────────────
   const endInterview = useCallback(async () => {
     cancelSpeech();
-    if (mediaRef.current?.state === "recording") {
-      try {
-        mediaRef.current.stop();
-      } catch {}
-    }
+    forceStop();
     try {
       await api.post(`/api/interview/${id}/end`);
       setPhase("done");
@@ -336,7 +309,7 @@ export default function InterviewRoom() {
       setPhase("done");
       setStatusText("Interview complete!");
     }
-  }, [id, speak, cancelSpeech]);
+  }, [id, speak, cancelSpeech, forceStop]);
 
   // ── Listen for Enter key to end the interview ─────────────────────────────
   useEffect(() => {
@@ -366,11 +339,9 @@ export default function InterviewRoom() {
     return () => {
       window.clearTimeout(timer);
       audioRef.current?.pause();
-      if (mediaRef.current?.state === "recording") {
-        mediaRef.current.stop();
-      }
+      forceStop();
     };
-  }, [fetchAndSpeak]);
+  }, [fetchAndSpeak, forceStop]);
 
   // ── Interrupt AI and start answering ─────────────────────────────────────
   const interrupt = () => {
