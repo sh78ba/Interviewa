@@ -29,6 +29,38 @@ interface Feedback {
   better_answer: string;
 }
 
+const LANGUAGES = [
+  { key: "javascript", label: "JavaScript (ES6)", ext: "js", template: "// Write your JavaScript solution here\n" },
+  { key: "python", label: "Python (3.x)", ext: "py", template: "# Write your Python solution here\n" },
+  { key: "typescript", label: "TypeScript", ext: "ts", template: "// Write your TypeScript solution here\n" },
+  { key: "java", label: "Java", ext: "java", template: "// Write your Java solution here\n" },
+  { key: "cpp", label: "C++", ext: "cpp", template: "// Write your C++ solution here\n" },
+  { key: "go", label: "Go", ext: "go", template: "// Write your Go solution here\n" },
+];
+
+function detectLanguage(text: string): string | null {
+  const lower = text.toLowerCase();
+  if (/\b(javascript|js)\b/i.test(lower)) {
+    return "javascript";
+  }
+  if (/\bpython\b/i.test(lower)) {
+    return "python";
+  }
+  if (/\b(typescript|ts)\b/i.test(lower)) {
+    return "typescript";
+  }
+  if (/\bjava\b/i.test(lower) && !/\bjavascript\b/i.test(lower)) {
+    return "java";
+  }
+  if (/\b(c\+\+|cpp)\b/i.test(lower)) {
+    return "cpp";
+  }
+  if (/\b(golang|go\s+language)\b/i.test(lower)) {
+    return "go";
+  }
+  return null;
+}
+
 type Phase =
   | "loading" // fetching question from backend
   | "ai_speaking" // AI reading the question aloud
@@ -47,6 +79,7 @@ export default function InterviewRoom() {
   const [pendingQuestion, setPendingQuestion] = useState<Question | null>(null);
   const [transcript, setTranscript] = useState("");
   const [code, setCode] = useState("// Write your solution here\n");
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [statusText, setStatusText] = useState("Loading your interview...");
 
@@ -342,6 +375,40 @@ export default function InterviewRoom() {
       forceStop();
     };
   }, [fetchAndSpeak, forceStop]);
+
+  // ── Sync language on question load ───────────────────────────────────────
+  useEffect(() => {
+    if (question && question.is_coding) {
+      const detectedLang = detectLanguage(question.question);
+      if (detectedLang) {
+        setSelectedLanguage(detectedLang);
+        const template = LANGUAGES.find((l) => l.key === detectedLang)?.template || "";
+        setCode(template);
+      } else {
+        const currentLang = selectedLanguage || "javascript";
+        setSelectedLanguage(currentLang);
+        const template = LANGUAGES.find((l) => l.key === currentLang)?.template || "";
+        setCode(template);
+      }
+    }
+  }, [question]);
+
+  const handleLanguageChange = (langKey: string) => {
+    const defaultTemplate = LANGUAGES.find((l) => l.key === selectedLanguage)?.template || "";
+    const cleanCode = code.trim();
+    const cleanTemplate = defaultTemplate.trim();
+
+    if (cleanCode && cleanCode !== cleanTemplate) {
+      const confirmSwitch = window.confirm(
+        "Switching languages will clear your current code. Do you want to proceed?"
+      );
+      if (!confirmSwitch) return;
+    }
+
+    setSelectedLanguage(langKey);
+    const newTemplate = LANGUAGES.find((l) => l.key === langKey)?.template || "";
+    setCode(newTemplate);
+  };
 
   // ── Interrupt AI and start answering ─────────────────────────────────────
   const interrupt = () => {
@@ -834,15 +901,53 @@ export default function InterviewRoom() {
           {/* Right panel - code editor */}
           <div style={{ padding: 20, overflowY: "auto", background: "var(--bg-soft)", height: "100%" }}>
             <div className="ide-wrapper" style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-              <div className="ide-header">
+              <div className="ide-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div className="ide-tabs">
                   <div className="ide-tab">
                     <Terminal size={12} color="#111" />
-                    <span>solution.js</span>
+                    <span>solution.{LANGUAGES.find((l) => l.key === selectedLanguage)?.ext || "js"}</span>
                   </div>
                 </div>
-                <div style={{ fontSize: 10, color: "var(--muted)", fontFamily: "monospace" }}>
-                  JavaScript (ES6)
+                <div>
+                  {question && detectLanguage(question.question) ? (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 10,
+                      color: "var(--text-strong)",
+                      fontFamily: "monospace",
+                      background: "var(--bg-soft)",
+                      padding: "4px 8px",
+                      borderRadius: 4,
+                      border: "1px solid var(--line)"
+                    }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#e11d48" }} />
+                      <span>{LANGUAGES.find((l) => l.key === selectedLanguage)?.label} (Required)</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => handleLanguageChange(e.target.value)}
+                      style={{
+                        fontSize: 11,
+                        fontFamily: "monospace",
+                        background: "var(--bg)",
+                        color: "var(--text-strong)",
+                        border: "1px solid var(--line)",
+                        borderRadius: 4,
+                        padding: "4px 8px",
+                        cursor: "pointer",
+                        outline: "none"
+                      }}
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.key} value={lang.key}>
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <div className="ide-editor" style={{ flex: 1, display: "flex", minHeight: 300 }}>
