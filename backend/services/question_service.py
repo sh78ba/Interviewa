@@ -53,6 +53,52 @@ def _parse(raw: str) -> list[dict]:
     except Exception:
         return []
 
+ROUND_INSTRUCTIONS = {
+    "resume": """
+This is a Resume Deep Dive round.
+CRITICAL INSTRUCTIONS:
+- You MUST focus ONLY and strictly on the candidate's resume (their projects, experience, choices, achievements, and technical stack described in their resume profile).
+- Do not ask generic questions. Every question must relate directly to something on the candidate's resume.
+- If no resume profile, skills, or projects are available, ask general questions about the candidate's past real-world project experience, their specific role in it, and key decisions they made.
+- Set "is_coding" to false for all questions.
+""",
+    "dsa": """
+This is a DSA & Coding round.
+CRITICAL INSTRUCTIONS:
+- You MUST generate ONLY coding questions (algorithm and data structure problems).
+- Do not ask theoretical or conversational questions.
+- Set "is_coding" to true for EVERY question in this round.
+""",
+    "system_design": """
+This is a System Design round.
+CRITICAL INSTRUCTIONS:
+- You MUST split the questions: exactly 50% must be High-Level Design (HLD) questions (e.g., scalability, microservices, databases, system architecture, caching, CDNs) and exactly 50% must be Low-Level Design (LLD) questions (e.g., class/component design, database schema design, design patterns, API signatures, concurrency).
+- For all High-Level Design (HLD) questions, set "is_coding" to false.
+- For all Low-Level Design (LLD) questions, the candidate is required to write code (e.g. implementing class structures, interface designs, pattern templates, or schema classes). You MUST set "is_coding" to true for all Low-Level Design (LLD) questions.
+""",
+    "technical": """
+This is a Technical Core round.
+CRITICAL INSTRUCTIONS:
+- You MUST ask core subject questions as well as other technical stack questions.
+- Maintain a balance of approximately 40% core computer science subject questions (e.g., database indexing/transactions, OS threads/processes/memory management, computer networking protocols, OOP/FP fundamentals) and 60% other technical questions (specific language features, frameworks, libraries, and tools relevant to the candidate's stack).
+- Set "is_coding" to false for these questions.
+""",
+    "hr": """
+This is an HR / Behavioral round.
+CRITICAL INSTRUCTIONS:
+- Focus strictly on HR-related, behavioral traits, soft skills, teamwork, handling conflict, career growth, and situational scenarios.
+- Do NOT ask any technical questions, coding problems, language-specific syntax questions, or system design questions.
+- Set "is_coding" to false for all questions.
+""",
+    "cultural": """
+This is a Cultural Fit round.
+CRITICAL INSTRUCTIONS:
+- Focus strictly on cultural alignment, work style preferences, collaboration, motivation, company values fit, and career goals.
+- Do NOT ask any technical or coding questions.
+- Set "is_coding" to false for all questions.
+"""
+}
+
 async def generate_questions(
     round_key: str,
     role: str,
@@ -64,22 +110,32 @@ async def generate_questions(
 ) -> list[dict]:
 
     cfg = ROUND_CONFIGS.get(round_key, ROUND_CONFIGS["technical"])
+    round_instruction = ROUND_INSTRUCTIONS.get(round_key, "")
 
-    if cfg["task"] == "hr":
+    tech_stack = profile.get("tech_stack", [])
+    skills = profile.get("skills", [])
+    projects = [p.get("name", "") for p in profile.get("projects", []) if isinstance(p, dict)] if isinstance(profile.get("projects"), list) else []
+
+    is_behavioral = round_key in ["hr", "cultural"]
+
+    if is_behavioral:
         prompt = f"""
-You are an HR recruiter or hiring manager conducting a {cfg['name']} interview for a {level} {role} position.
+You are an HR recruiter, hiring manager, or cultural interviewer conducting a {cfg['name']} for a {level} {role} position.
 Speak like a real interviewer talking directly to the candidate.
 Write every question in a natural, conversational style using direct address like "you" or "your experience".
 Do not sound robotic, instructional, or like a list of prompts.
 Do not mention that you are an AI, a model, or an assistant.
 
-Candidate level: {level}
-Focus areas: {cfg['prompt_hint']}
-Job description context: {job_description[:500] if job_description else 'Not provided'}
+Candidate Role: {role}
+Candidate Level: {level}
+Job Description Context: {job_description[:1000] if job_description else 'Not provided'}
+Resume Profile Context: {json.dumps(profile) if profile else 'Not provided'}
 
-Generate exactly {cfg['count']} interview questions focusing on behavioral traits, communication, soft skills, and cultural fit.
-CRITICAL: Do NOT ask any technical questions, coding problems, language-specific syntax questions, or system design questions. The questions must be purely behavioral (situational questions, teamwork, conflict, dealing with failure, career growth).
-Make them specific and realistic — not generic. Set "is_coding" to false for all questions.
+{round_instruction}
+
+Generate exactly {cfg['count']} interview questions.
+CRITICAL: You MUST adjust the difficulty, complexity, and theme of your questions to be perfectly tailored for a {level}-level {role}.
+Calibrate your questions according to the candidate's resume/profile details and the Job Description context. Tailor the scenarios to match the responsibilities of the role and company context if provided.
 
 Return ONLY a valid JSON array:
 [
@@ -102,16 +158,20 @@ Write every question in a natural, conversational style using direct address lik
 Do not sound robotic, instructional, or like a list of prompts.
 Do not mention that you are an AI, a model, or an assistant.
 
-Candidate level: {level}
-Tech stack: {profile.get('tech_stack', [])}
-Skills: {profile.get('skills', [])}
-Projects: {[p['name'] for p in profile.get('projects', [])]}
-Focus areas: {cfg['prompt_hint']}
-Job description context: {job_description[:500] if job_description else 'Not provided'}
+Candidate Role: {role}
+Candidate Level: {level}
+Candidate Tech Stack: {tech_stack}
+Candidate Skills: {skills}
+Candidate Projects: {projects}
+Job Description Context: {job_description[:1000] if job_description else 'Not provided'}
+Full Resume Profile Context: {json.dumps(profile) if profile else 'Not provided'}
+
+{round_instruction}
 
 Generate exactly {cfg['count']} interview questions appropriate for a {level} {role} engineer.
 Vary difficulty. Make them specific and realistic — not generic.
-For coding questions set is_coding to true.
+You MUST adjust the difficulty, complexity, and technical depth of your questions to be perfectly tailored for a {level}-level {role}.
+Calibrate and adapt your questions according to the candidate's resume details and the Job Description context (e.g. prioritize technologies mentioned in the JD or candidate stack).
 
 Return ONLY a valid JSON array:
 [
@@ -120,7 +180,7 @@ Return ONLY a valid JSON array:
     "difficulty": "easy|medium|hard",
     "topic": "topic being tested",
     "what_to_look_for": "what a strong answer covers",
-    "is_coding": false
+    "is_coding": true_or_false_based_on_instructions
   }}
 ]
 
