@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
 from pydantic import BaseModel
 from typing import Optional
-import os, shutil, uuid
+import os, shutil, uuid, asyncio
 
 from core.database import get_db
 from models.models import Interview, Question, Answer, Report
@@ -166,6 +166,50 @@ async def next_question(
     }
 
 
+# ── Evaluate pending answers helper ──────────────────────────────────────────
+async def evaluate_pending_answers(
+    interview_id: str,
+    db: AsyncSession,
+    creds: dict,
+    extracted_profile: dict
+):
+    result = await db.execute(
+        select(Answer, Question)
+        .join(Question, Answer.question_id == Question.id)
+        .where(Answer.interview_id == interview_id)
+        .where(Answer.score == -1.0)
+    )
+    pending = result.all()
+    if not pending:
+        return
+
+    sem = asyncio.Semaphore(5)
+
+    async def eval_one(ans_obj: Answer, q_obj: Question):
+        async with sem:
+            combined_text = ans_obj.answer_text
+            if ans_obj.code:
+                combined_text += f"\n\nCode:\n{ans_obj.code}"
+
+            evaluation = await evaluate_answer(
+                question=q_obj.question_text,
+                answer=combined_text,
+                topic=q_obj.topic,
+                round_name=q_obj.round_name,
+                level=extracted_profile.get("level", "mid") if extracted_profile else "mid",
+                what_to_look_for=q_obj.what_to_look,
+                is_coding=q_obj.is_coding,
+                ai_service_url=creds.get("ai_service_url"),
+                groq_api_key=creds.get("groq_api_key")
+            )
+            ans_obj.score = evaluation.get("score", 5)
+            ans_obj.feedback = evaluation.get("feedback", "")
+            ans_obj.better_answer = evaluation.get("better_answer", "")
+
+    await asyncio.gather(*(eval_one(a, q) for a, q in pending))
+    await db.commit()
+
+
 # ── Submit answer ────────────────────────────────────────────────────────────
 class AnswerRequest(BaseModel):
     question_id: str
@@ -194,51 +238,26 @@ async def submit_answer(
     if not iv:
         raise HTTPException(404, "Interview not found")
 
-    answer_text = req.answer_text
-    if req.code:
-        answer_text += f"\n\nCode:\n{req.code}"
-
-    # If the candidate provided no answer, treat as unanswered (score 0)
-    if not answer_text.strip():
-        evaluation = {
-            "score": 0,
-            "feedback": "No answer provided",
-            "strengths": "",
-            "weaknesses": "No answer",
-            "better_answer": "Provide a clear, structured response explaining your approach."
-        }
-    else:
-        evaluation = await evaluate_answer(
-            question=q.question_text,
-            answer=answer_text,
-            topic=q.topic,
-            round_name=q.round_name,
-            level=iv.extracted_profile.get("level", "mid"),
-            what_to_look_for=q.what_to_look,
-            ai_service_url=creds["ai_service_url"],
-            groq_api_key=creds["groq_api_key"]
-        )
-
     db.add(Answer(
         interview_id=interview_id,
         question_id=req.question_id,
         round_name=q.round_name,
         answer_text=req.answer_text,
         code=req.code or "",
-        score=evaluation.get("score", 5),
-        feedback=evaluation.get("feedback", ""),
-        better_answer=evaluation.get("better_answer", "")
+        score=-1.0,
+        feedback="Pending evaluation",
+        better_answer=""
     ))
 
     iv.current_question_index += 1
     await db.commit()
 
     return {
-        "score": evaluation.get("score"),
-        "feedback": evaluation.get("feedback"),
-        "strengths": evaluation.get("strengths"),
-        "weaknesses": evaluation.get("weaknesses"),
-        "better_answer": evaluation.get("better_answer")
+        "score": -1.0,
+        "feedback": "Pending evaluation",
+        "strengths": "",
+        "weaknesses": "",
+        "better_answer": ""
     }
 
 
@@ -247,7 +266,8 @@ async def submit_answer(
 async def end_interview(
     interview_id: str,
     db: AsyncSession = Depends(get_db),
-    user_id: str = Depends(get_user_session)
+    user_id: str = Depends(get_user_session),
+    creds: dict = Depends(get_ai_credentials)
 ):
     result = await db.execute(
         select(Interview)
@@ -282,6 +302,15 @@ async def end_interview(
             ))
 
     await db.commit()
+
+    # Evaluate any pending answers
+    await evaluate_pending_answers(
+        interview_id=interview_id,
+        db=db,
+        creds=creds,
+        extracted_profile=iv.extracted_profile or {}
+    )
+
     return {"status": "completed", "message": "Interview ended"}
 
 
@@ -302,6 +331,15 @@ async def get_report(
     if not iv:
         raise HTTPException(404, "Not found")
 
+    # Evaluate pending answers first
+    await evaluate_pending_answers(
+        interview_id=interview_id,
+        db=db,
+        creds=creds,
+        extracted_profile=iv.extracted_profile or {}
+    )
+
+    # Now get all answers
     result = await db.execute(select(Answer).where(Answer.interview_id == interview_id))
     answers = result.scalars().all()
 
@@ -318,7 +356,7 @@ async def get_report(
         })
 
     report_data = await generate_report(
-        iv.extracted_profile,
+        iv.extracted_profile or {},
         all_answers,
         ai_service_url=creds["ai_service_url"],
         groq_api_key=creds["groq_api_key"]
@@ -339,7 +377,7 @@ async def get_report(
         await db.commit()
 
     return {
-        "candidate": iv.extracted_profile.get("candidate_name"),
+        "candidate": iv.extracted_profile.get("candidate_name") if iv.extracted_profile else "Unknown",
         "role": iv.role,
         "level": iv.level,
         "report": report_data,

@@ -8,9 +8,47 @@ async def evaluate_answer(
     round_name: str,
     level: str,
     what_to_look_for: str = "",
+    is_coding: bool = False,
     ai_service_url: str = None,
     groq_api_key: str = None
 ) -> dict:
+
+    # 1. Programmatic Pre-checks for empty, filler, or skip answers
+    cleaned_ans = answer.strip().lower().replace(".", "").replace(",", "").replace("?", "").replace("!", "")
+    filler_phrases = {
+        "skip", "skipped", "pass", "don't know", "dont know", "i don't know", "i dont know", 
+        "no idea", "i have no idea", "no answer", "no answer provided", "test", "testing", 
+        "is it working", "testing the microphone", "test the microphone", "microphone working"
+    }
+    if (
+        not cleaned_ans 
+        or cleaned_ans in filler_phrases
+        or "test the microphone" in cleaned_ans 
+        or "testing the microphone" in cleaned_ans 
+        or "is it working" in cleaned_ans
+        or "microphone working" in cleaned_ans
+        or cleaned_ans == "test"
+    ):
+        return {
+            "relevance_score": 0,
+            "correctness_score": 0,
+            "completeness_score": 0,
+            "score": 0,
+            "feedback": "The candidate did not provide a valid answer to this question (skipped or test phrase detected).",
+            "strengths": "",
+            "weaknesses": "Unanswered/skipped question.",
+            "better_answer": "Provide a complete response to this question to get feedback.",
+            "next_difficulty": "same"
+        }
+
+    # Calculate word count for non-coding length-based score caps
+    word_count = len(answer.strip().split())
+    cap_limit = 10
+    if not is_coding:
+        if word_count < 5:
+            cap_limit = 2
+        elif word_count < 15:
+            cap_limit = 5
 
     is_behavioral = round_name.lower() in ["hr", "cultural", "behavioural", "behavioral"]
     star_instruction = ""
@@ -40,12 +78,16 @@ Evaluation details:
 Round: {round_name}
 Topic: {topic}
 Level expected: {level}
+Coding Question: {"Yes" if is_coding else "No"}
 
 CRITICAL RULES:
-1. If the candidate's answer is off-topic, completely unrelated to the question, or consists of meta-talk/test phrases (e.g., testing the microphone, testing the audio, checking if it works, "this is a test"), you MUST score it 0.
+1. If the candidate's answer is off-topic, completely unrelated to the question, or consists of meta-talk/test phrases, you MUST score it 0.
 2. If the candidate simply repeats the question back to you, or asks a question back, or slightly modifies the question without answering it, you MUST score it 0.
 3. If the candidate's answer is empty or has only filler words (e.g., "I don't know", "skip", "test"), you MUST score it 0.
 4. Do NOT reward buzzwords, vague filler, or unrelated technical topics.
+5. If the candidate's answer is technically incorrect, contains major conceptual errors, or shows lack of basic understanding, you MUST score correctness_score as 0 or 1.
+6. If the answer is off-topic or doesn't address the specific question asked, relevance_score MUST be 0 or 1.
+7. For Coding Questions, evaluate both the code syntax/correctness and the logical approach explained in the answer.
 
 {star_instruction}
 
@@ -84,29 +126,23 @@ Return ONLY the JSON. No explanation.
         completeness = int(parsed.get("completeness_score", 0) or 0)
         score = int(parsed.get("score", relevance + correctness + completeness) or 0)
 
-        # Python-level guardrails: prevent unrelated/meta-test answers from getting high scores
-        cleaned_ans = answer.strip().lower()
-        if (
-            not cleaned_ans 
-            or "test the microphone" in cleaned_ans 
-            or "testing the microphone" in cleaned_ans 
-            or "is it working" in cleaned_ans
-            or "microphone working" in cleaned_ans
-            or cleaned_ans == "test"
-        ):
-            relevance = 0
-            correctness = 0
-            completeness = 0
-            score = 0
-            parsed["feedback"] = "The candidate did not provide a valid answer to the question (meta-talk/test phrase detected)."
-            parsed["strengths"] = ""
-            parsed["weaknesses"] = "Unanswered/unrelated audio test phrase."
-
         # Guardrail: prevent unrelated answers from getting inflated scores.
         if relevance <= 1:
             score = min(score, 3)
         elif relevance == 2:
             score = min(score, 5)
+
+        # Apply programmatic word-count score caps
+        if score > cap_limit:
+            score = cap_limit
+            if score == 2:
+                relevance = min(relevance, 1)
+                correctness = min(correctness, 1)
+                completeness = 0
+            elif score == 5:
+                relevance = min(relevance, 2)
+                correctness = min(correctness, 2)
+                completeness = min(completeness, 1)
 
         parsed["relevance_score"] = max(0, min(4, relevance))
         parsed["correctness_score"] = max(0, min(4, correctness))
