@@ -1013,6 +1013,48 @@ export default function NewInterview() {
               </div>
             </div>
 
+            {/* AI Calibration Settings (Required when Hosted) */}
+            {isHosted && (
+              <div style={{ 
+                marginTop: 4, 
+                padding: "16px 20px", 
+                borderRadius: 8, 
+                border: "1px solid var(--line)", 
+                background: "rgba(0, 0, 0, 0.01)" 
+              }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
+                  AI Service Configuration
+                </h4>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.4 }}>
+                  To run the speech transcription and LLM evaluation, specify your Google Colab Ngrok tunnel URL or your Groq API Key. Leaving both blank will default to the hosted server's local configuration.
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+                  <div>
+                    <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Colab GPU / Ngrok Service URL</label>
+                    <input
+                      type="text"
+                      value={aiServiceUrl}
+                      onChange={(e) => setAiServiceUrl(e.target.value)}
+                      placeholder="https://xxxx.ngrok-free.app"
+                      className="input"
+                      style={{ fontSize: 12, padding: "8px 12px" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Groq API Key (Optional Fallback)</label>
+                    <input
+                      type="password"
+                      value={groqApiKey}
+                      onChange={(e) => setGroqApiKey(e.target.value)}
+                      placeholder="gsk_..."
+                      className="input"
+                      style={{ fontSize: 12, padding: "8px 12px" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Company Options Card & Scrape Badge */}
             {companyType !== "none" && (
               <div className="surface-strong" style={{ 
@@ -1256,48 +1298,6 @@ export default function NewInterview() {
                 />
               </div>
             </div>
-
-            {/* AI Calibration Settings (Required when Hosted) */}
-            {isHosted && (
-              <div style={{ 
-                marginTop: 4, 
-                padding: "16px 20px", 
-                borderRadius: 8, 
-                border: "1px solid var(--line)", 
-                background: "rgba(0, 0, 0, 0.01)" 
-              }}>
-                <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
-                  AI Service Configuration
-                </h4>
-                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.4 }}>
-                  To run the speech transcription and LLM evaluation, specify your Google Colab Ngrok tunnel URL or your Groq API Key. Leaving both blank will default to the hosted server's local configuration.
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-                  <div>
-                    <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Colab GPU / Ngrok Service URL</label>
-                    <input
-                      type="text"
-                      value={aiServiceUrl}
-                      onChange={(e) => setAiServiceUrl(e.target.value)}
-                      placeholder="https://xxxx.ngrok-free.app"
-                      className="input"
-                      style={{ fontSize: 12, padding: "8px 12px" }}
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Groq API Key (Optional Fallback)</label>
-                    <input
-                      type="password"
-                      value={groqApiKey}
-                      onChange={(e) => setGroqApiKey(e.target.value)}
-                      placeholder="gsk_..."
-                      className="input"
-                      style={{ fontSize: 12, padding: "8px 12px" }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {error && (
               <div style={{ 
