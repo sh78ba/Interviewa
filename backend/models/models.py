@@ -7,7 +7,7 @@ def gen_id():
     return str(uuid.uuid4())
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "interviewa_users"
     id            = Column(String, primary_key=True, default=gen_id)
     email         = Column(String, unique=True, nullable=False)
     hashed_pw     = Column(String, nullable=False)
@@ -15,11 +15,12 @@ class User(Base):
     created_at    = Column(DateTime, server_default=func.now())
 
 class Interview(Base):
-    __tablename__ = "interviews"
+    __tablename__ = "interviewa_interviews"
     id                     = Column(String, primary_key=True, default=gen_id)
     user_id                = Column(String, nullable=False)
     role                   = Column(String, nullable=False)   # frontend, backend, fullstack, devops, ml
     level                  = Column(String, nullable=False)   # junior, mid, senior, staff
+    company                = Column(String, nullable=True, default="")
     rounds                 = Column(JSON)                     # ["dsa","system_design","technical","hr"]
     job_description        = Column(Text, default="")
     resume_text            = Column(Text, default="")
@@ -30,7 +31,7 @@ class Interview(Base):
     created_at             = Column(DateTime, server_default=func.now())
 
 class Question(Base):
-    __tablename__ = "questions"
+    __tablename__ = "interviewa_questions"
     id            = Column(String, primary_key=True, default=gen_id)
     interview_id  = Column(String, nullable=False)
     round_name    = Column(String, nullable=False)
@@ -43,7 +44,7 @@ class Question(Base):
     is_coding     = Column(Boolean, default=False)
 
 class Answer(Base):
-    __tablename__ = "answers"
+    __tablename__ = "interviewa_answers"
     id            = Column(String, primary_key=True, default=gen_id)
     interview_id  = Column(String, nullable=False)
     question_id   = Column(String, nullable=False)
@@ -56,7 +57,7 @@ class Answer(Base):
     submitted_at  = Column(DateTime, server_default=func.now())
 
 class Report(Base):
-    __tablename__ = "reports"
+    __tablename__ = "interviewa_reports"
     id               = Column(String, primary_key=True, default=gen_id)
     interview_id     = Column(String, unique=True, nullable=False)
     scores_by_round  = Column(JSON, default={})

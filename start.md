@@ -13,17 +13,14 @@ This file shows how to set up and start the project locally.
 
 The backend expects these values from `.env`:
 
-- `ai_service_url`
-- `database_url`
-- `redis_url`
-- `ai_service_url`
-- `database_url`
-- `redis_url`
-- `groq_api_key` (optional, but recommended if the primary AI service is unavailable)
-- `langfuse_public_key` (optional)
-- `langfuse_secret_key` (optional)
-- `chroma_host`
-- `chroma_port`
+- `INTERVIEWA_AI_SERVICE_URL`
+- `INTERVIEWA_DATABASE_URL`
+- `INTERVIEWA_REDIS_URL`
+- `INTERVIEWA_GROQ_API_KEY` (optional, but recommended if the primary AI service is unavailable)
+- `INTERVIEWA_LANGFUSE_PUBLIC_KEY` (optional)
+- `INTERVIEWA_LANGFUSE_SECRET_KEY` (optional)
+- `INTERVIEWA_CHROMA_HOST`
+- `INTERVIEWA_CHROMA_PORT`
 
 ## Install Dependencies
 
@@ -47,9 +44,9 @@ If you want to run the AI service in Google Colab (recommended for quick GPU acc
 
 When the notebook creates a public URL it will print a line like:
 
-`AI_SERVICE_URL=https://...`
+`INTERVIEWA_AI_SERVICE_URL=https://...`
 
-Copy that `AI_SERVICE_URL` value into your backend `.env` as `AI_SERVICE_URL` (or `ai_service_url`) before starting the backend. If the Colab runtime restarts the URL will change — re-run the notebook and copy the new value.
+Copy that value into your backend `.env` as `INTERVIEWA_AI_SERVICE_URL` before starting the backend. If the Colab runtime restarts the URL will change — re-run the notebook and copy the new value.
 
 ## Start the Project
 

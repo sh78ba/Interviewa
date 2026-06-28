@@ -31,13 +31,13 @@ export default function ConnectionTest() {
   // AI calibration overrides state
   const [aiServiceUrl, setAiServiceUrl] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("ai_service_url") || "";
+      return localStorage.getItem("interviewa_ai_service_url") || localStorage.getItem("ai_service_url") || "";
     }
     return "";
   });
   const [groqApiKey, setGroqApiKey] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("groq_api_key") || "";
+      return localStorage.getItem("interviewa_groq_api_key") || localStorage.getItem("groq_api_key") || "";
     }
     return "";
   });
@@ -46,14 +46,14 @@ export default function ConnectionTest() {
   const handleSaveSettings = () => {
     if (typeof window !== "undefined") {
       if (aiServiceUrl.trim()) {
-        localStorage.setItem("ai_service_url", aiServiceUrl.trim());
+        localStorage.setItem("interviewa_ai_service_url", aiServiceUrl.trim());
       } else {
-        localStorage.removeItem("ai_service_url");
+        localStorage.removeItem("interviewa_ai_service_url");
       }
       if (groqApiKey.trim()) {
-        localStorage.setItem("groq_api_key", groqApiKey.trim());
+        localStorage.setItem("interviewa_groq_api_key", groqApiKey.trim());
       } else {
-        localStorage.removeItem("groq_api_key");
+        localStorage.removeItem("interviewa_groq_api_key");
       }
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 3000);

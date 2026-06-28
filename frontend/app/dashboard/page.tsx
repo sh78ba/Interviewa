@@ -12,6 +12,7 @@ interface Interview {
   id: string;
   role: string;
   level: string;
+  company?: string;
   status: string;
   rounds: string[];
   created_at: string;
@@ -259,7 +260,7 @@ export default function Dashboard() {
                             color: "var(--text-strong)"
                           }}
                         >
-                          {iv.role} — {iv.level}
+                          {iv.company ? `${iv.company.charAt(0).toUpperCase() + iv.company.slice(1)} • ` : ""}{iv.role} — {iv.level}
                         </span>
                         <span
                           style={{
