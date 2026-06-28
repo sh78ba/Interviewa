@@ -1034,7 +1034,14 @@ export default function NewInterview() {
                     <input
                       type="text"
                       value={aiServiceUrl}
-                      onChange={(e) => setAiServiceUrl(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAiServiceUrl(val);
+                        if (typeof window !== "undefined") {
+                          if (val.trim()) localStorage.setItem("interviewa_ai_service_url", val.trim());
+                          else localStorage.removeItem("interviewa_ai_service_url");
+                        }
+                      }}
                       placeholder="https://xxxx.ngrok-free.app"
                       className="input"
                       style={{ fontSize: 12, padding: "8px 12px" }}
@@ -1045,7 +1052,14 @@ export default function NewInterview() {
                     <input
                       type="password"
                       value={groqApiKey}
-                      onChange={(e) => setGroqApiKey(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setGroqApiKey(val);
+                        if (typeof window !== "undefined") {
+                          if (val.trim()) localStorage.setItem("interviewa_groq_api_key", val.trim());
+                          else localStorage.removeItem("interviewa_groq_api_key");
+                        }
+                      }}
                       placeholder="gsk_..."
                       className="input"
                       style={{ fontSize: 12, padding: "8px 12px" }}
