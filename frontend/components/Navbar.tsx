@@ -36,7 +36,7 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <div className="nav-links" style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <a
             href="https://github.com/sh78ba/Interviewa"
             target="_blank"
@@ -48,7 +48,8 @@ export default function Navbar() {
               gap: 6, 
               padding: "6px 12px", 
               fontSize: 12,
-              borderRadius: 4
+              borderRadius: 4,
+              whiteSpace: "nowrap"
             }}
           >
             <svg 
@@ -75,7 +76,8 @@ export default function Navbar() {
               gap: 6, 
               padding: "6px 12px", 
               fontSize: 12,
-              borderRadius: 4
+              borderRadius: 4,
+              whiteSpace: "nowrap"
             }}
           >
             <BookOpen size={14} />
@@ -90,7 +92,8 @@ export default function Navbar() {
               gap: 6, 
               padding: "6px 12px", 
               fontSize: 12,
-              borderRadius: 4
+              borderRadius: 4,
+              whiteSpace: "nowrap"
             }}
           >
             <LayoutDashboard size={14} />

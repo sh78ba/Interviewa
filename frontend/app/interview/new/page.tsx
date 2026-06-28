@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
-import { 
-  Laptop, Server, Layers, Settings, BrainCircuit, 
+import {
+  Laptop, Server, Layers, Settings, BrainCircuit,
   User, Shield, Award, Award as StaffIcon,
   CheckCircle, FileText, Upload, AlertCircle, Sparkles, Globe,
   Star, Crown, Gem
@@ -625,7 +625,7 @@ export default function NewInterview() {
     if (companyLevels.length > 0) {
       const levelExists = companyLevels.some(l => l.key === level);
       if (!levelExists) {
-        const defaultLevel = companyLevels.find(l => 
+        const defaultLevel = companyLevels.find(l =>
           l.key === "mid" || l.key === "L4" || l.key === "IC4" || l.key === "SDE II" || l.key === "VP" || l.key === "MTS" || l.key === "Software Engineer"
         );
         setLevel(defaultLevel ? defaultLevel.key : companyLevels[0].key);
@@ -776,11 +776,11 @@ export default function NewInterview() {
   return (
     <>
       <Navbar />
-      <main style={{ 
-        minHeight: "calc(100vh - 72px)", 
-        display: "flex", 
-        alignItems: "flex-start", 
-        justifyContent: "center", 
+      <main style={{
+        minHeight: "calc(100vh - 72px)",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
         padding: "40px 16px",
         background: "var(--bg-soft)",
         boxSizing: "border-box"
@@ -804,13 +804,13 @@ export default function NewInterview() {
 
           {/* Setup Fields */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            
+
             {/* Row 1: Target Company (Searchable Dropdown) */}
             <div className="setup-grid">
               <div ref={companyDropdownRef} style={{ position: "relative" }}>
                 <label className="field-label" style={{ fontSize: 12, marginBottom: 4 }}>Target Company</label>
                 <div style={{ position: "relative" }}>
-                  <input 
+                  <input
                     type="text"
                     value={companySearch}
                     onChange={(e) => {
@@ -825,23 +825,23 @@ export default function NewInterview() {
                     }}
                     placeholder="Search target company..."
                     className="input"
-                    style={{ 
-                      fontSize: 12, 
-                      padding: "8px 12px", 
+                    style={{
+                      fontSize: 12,
+                      padding: "8px 12px",
                       width: "100%",
-                      background: "var(--panel-strong)", 
-                      color: "var(--text-strong)", 
+                      background: "var(--panel-strong)",
+                      color: "var(--text-strong)",
                       border: "1px solid var(--line)",
                       borderRadius: 6,
                       height: "38px",
                       boxSizing: "border-box"
                     }}
                   />
-                  <span style={{ 
-                    position: "absolute", 
-                    right: 12, 
-                    top: "50%", 
-                    transform: "translateY(-50%)", 
+                  <span style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
                     color: "var(--muted)",
                     fontSize: 8,
                     pointerEvents: "none"
@@ -910,10 +910,10 @@ export default function NewInterview() {
                       ...COMPANIES,
                       { key: "other", label: "Other / Custom" }
                     ].filter(opt => opt.label.toLowerCase().includes(companySearch.toLowerCase())).length === 0 && (
-                      <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
-                        No companies found. Select "Other / Custom".
-                      </div>
-                    )}
+                        <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+                          No companies found. Select "Other / Custom".
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
@@ -928,8 +928,8 @@ export default function NewInterview() {
                     onChange={(e) => setCustomCompany(e.target.value)}
                     placeholder="Enter custom company (e.g. Stripe, OpenAI)"
                     className="input"
-                    style={{ 
-                      fontSize: 12, 
+                    style={{
+                      fontSize: 12,
                       padding: "8px 12px",
                       width: "100%",
                       boxSizing: "border-box",
@@ -1015,12 +1015,12 @@ export default function NewInterview() {
 
             {/* AI Calibration Settings (Required when Hosted) */}
             {isHosted && (
-              <div style={{ 
-                marginTop: 4, 
-                padding: "16px 20px", 
-                borderRadius: 8, 
-                border: "1px solid var(--line)", 
-                background: "rgba(0, 0, 0, 0.01)" 
+              <div style={{
+                marginTop: 4,
+                padding: "16px 20px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "rgba(0, 0, 0, 0.01)"
               }}>
                 <h4 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-strong)", marginBottom: 4 }}>
                   AI Service Configuration
@@ -1028,7 +1028,7 @@ export default function NewInterview() {
                 <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12, lineHeight: 1.4 }}>
                   To run the speech transcription and LLM evaluation, specify your Google Colab Ngrok tunnel URL or your Groq API Key. Leaving both blank will default to the hosted server's local configuration.
                 </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 16 }}>
                   <div>
                     <label className="field-label" style={{ fontSize: 11, marginBottom: 4, display: "block" }}>Colab GPU / Ngrok Service URL</label>
                     <input
@@ -1071,16 +1071,17 @@ export default function NewInterview() {
 
             {/* Company Options Card & Scrape Badge */}
             {companyType !== "none" && (
-              <div className="surface-strong" style={{ 
-                padding: "16px 20px", 
-                borderRadius: 8, 
-                border: "1px solid var(--line)", 
-                background: "rgba(0, 0, 0, 0.01)", 
-                display: "flex", 
-                flexDirection: "column", 
-                gap: 12 
+              <div className="surface-strong" style={{
+                padding: "16px 20px",
+                borderRadius: 8,
+                border: "1px solid var(--line)",
+                background: "rgba(0, 0, 0, 0.01)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12
               }}>
-                <style dangerouslySetInnerHTML={{__html: `
+                <style dangerouslySetInnerHTML={{
+                  __html: `
                   @keyframes ddg-spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
@@ -1093,12 +1094,12 @@ export default function NewInterview() {
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ 
-                      fontSize: 9, 
-                      fontWeight: 700, 
-                      color: "white", 
-                      background: "#111111", 
-                      padding: "3px 8px", 
+                    <span style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "white",
+                      background: "#111111",
+                      padding: "3px 8px",
                       borderRadius: 3,
                       letterSpacing: "0.05em",
                       display: "inline-flex",
@@ -1111,7 +1112,7 @@ export default function NewInterview() {
                       Real-world questions will be fetched for {companyType === "other" ? (customCompany || "custom company") : companyType}.
                     </span>
                   </div>
-                  
+
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <button
                       type="button"
@@ -1141,8 +1142,8 @@ export default function NewInterview() {
 
                 {/* Loading Skeleton */}
                 {detectingRounds && (
-                  <div style={{ 
-                    borderLeft: "2.5px solid var(--line)", 
+                  <div style={{
+                    borderLeft: "2.5px solid var(--line)",
                     paddingLeft: 12,
                     marginTop: 4,
                     display: "flex",
@@ -1158,8 +1159,8 @@ export default function NewInterview() {
 
                 {/* Dynamic Web Loop Details */}
                 {useDynamicLoop && detectedRoundsInfo && (
-                  <div style={{ 
-                    borderLeft: `2.5px solid ${detectedRoundsInfo.is_fallback ? "#e11d48" : "#22c55e"}`, 
+                  <div style={{
+                    borderLeft: `2.5px solid ${detectedRoundsInfo.is_fallback ? "#e11d48" : "#22c55e"}`,
                     paddingLeft: 12,
                     marginTop: 4,
                     display: "flex",
@@ -1170,13 +1171,13 @@ export default function NewInterview() {
                       <span style={{ fontSize: 10, fontWeight: 700, color: detectedRoundsInfo.is_fallback ? "#e11d48" : "#22c55e", textTransform: "uppercase", letterSpacing: "0.03em" }}>
                         {detectedRoundsInfo.is_fallback ? "Fallback Template Applied (Web Search failed)" : "Active Real-World Loop Detected"}
                       </span>
-                      <span style={{ 
-                        fontSize: 8, 
-                        fontWeight: 700, 
-                        color: "white", 
-                        background: detectedRoundsInfo.is_fallback ? "#e11d48" : "#22c55e", 
-                        padding: "1px 5px", 
-                        borderRadius: 2 
+                      <span style={{
+                        fontSize: 8,
+                        fontWeight: 700,
+                        color: "white",
+                        background: detectedRoundsInfo.is_fallback ? "#e11d48" : "#22c55e",
+                        padding: "1px 5px",
+                        borderRadius: 2
                       }}>{detectedRoundsInfo.is_fallback ? "FALLBACK" : "AI SYNTHESIZED"}</span>
                     </div>
 
@@ -1190,11 +1191,11 @@ export default function NewInterview() {
 
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
                       {detectedRoundsInfo.rounds.map((rnd, i) => (
-                        <div key={i} className="surface" style={{ 
-                          padding: "4px 8px", 
-                          borderRadius: 4, 
-                          border: "1px solid var(--line)", 
-                          fontSize: 10, 
+                        <div key={i} className="surface" style={{
+                          padding: "4px 8px",
+                          borderRadius: 4,
+                          border: "1px solid var(--line)",
+                          fontSize: 10,
                           fontWeight: 500,
                           display: "inline-flex",
                           alignItems: "center",
@@ -1202,12 +1203,12 @@ export default function NewInterview() {
                           background: "var(--panel-strong)"
                         }}>
                           <span style={{ color: "var(--text-strong)", fontWeight: 700 }}>{rnd.name}</span>
-                          <span style={{ 
-                            fontSize: 9, 
-                            color: "var(--muted)", 
-                            background: "var(--bg-soft)", 
-                            padding: "1px 4px", 
-                            borderRadius: 2 
+                          <span style={{
+                            fontSize: 9,
+                            color: "var(--muted)",
+                            background: "var(--bg-soft)",
+                            padding: "1px 4px",
+                            borderRadius: 2
                           }}>{rnd.count} qn{rnd.count > 1 ? 's' : ''}</span>
                         </div>
                       ))}
@@ -1257,12 +1258,12 @@ export default function NewInterview() {
                   Resume{" "}
                   <span style={{ color: "var(--muted)", fontWeight: 400 }}>(optional)</span>
                 </label>
-                <div 
+                <div
                   className="surface-strong"
-                  style={{ 
-                    border: "1px dashed var(--line)", 
-                    borderRadius: 6, 
-                    padding: 12, 
+                  style={{
+                    border: "1px dashed var(--line)",
+                    borderRadius: 6,
+                    padding: 12,
                     textAlign: "center",
                     position: "relative",
                     background: "rgba(0, 0, 0, 0.01)",
@@ -1277,13 +1278,13 @@ export default function NewInterview() {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => setResume(e.target.files?.[0] || null)}
-                    style={{ 
-                      position: "absolute", 
-                      top: 0, 
-                      left: 0, 
-                      width: "100%", 
-                      height: "100%", 
-                      opacity: 0, 
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100%",
+                      opacity: 0,
                       cursor: "pointer",
                       zIndex: 10
                     }}
@@ -1314,11 +1315,11 @@ export default function NewInterview() {
             </div>
 
             {error && (
-              <div style={{ 
-                display: "flex", 
-                gap: 8, 
-                alignItems: "center", 
-                color: "var(--text-strong)", 
+              <div style={{
+                display: "flex",
+                gap: 8,
+                alignItems: "center",
+                color: "var(--text-strong)",
                 background: "var(--bg-soft)",
                 border: "1px solid var(--accent-strong)",
                 padding: "8px 12px",
