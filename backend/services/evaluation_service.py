@@ -50,7 +50,16 @@ async def evaluate_answer(
         elif word_count < 15:
             cap_limit = 5
 
-    is_behavioral = round_name.lower() in ["hr", "cultural", "behavioural", "behavioral"]
+    is_behavioral = (
+        round_name.lower() in ["hr", "cultural", "behavioural", "behavioral"]
+        or "behavioral" in round_name.lower()
+        or "behavioural" in round_name.lower()
+        or "cultural" in round_name.lower()
+        or "googleyness" in round_name.lower()
+        or "leadership" in round_name.lower()
+        or round_name.lower().endswith("culture")
+        or round_name.lower().endswith("fit")
+    )
     star_instruction = ""
     if is_behavioral:
         star_instruction = """

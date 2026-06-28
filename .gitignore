@@ -10,6 +10,8 @@ backend/__pycache__/
 backend/**/*.py[cod]
 backend/*.sqlite3
 backend/*.db
+backend/*.db-shm
+backend/*.db-wal
 backend/.venv/
 backend/venv/
 backend/uploads/

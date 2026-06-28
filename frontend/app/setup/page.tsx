@@ -25,12 +25,12 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\\Scripts\\activate`,
     backendDeps: `pip install -r requirements.txt`,
     backendStart: `uvicorn main:app --reload --port 8000`,
-    envTemplate: `ai_service_url=https://your-colab-url.ngrok-free.app
-database_url=sqlite:///./interviewa.db
-redis_url=redis://localhost:6379/0
-groq_api_key=gsk_your_key_here
-chroma_host=localhost
-chroma_port=8000`,
+    envTemplate: `INTERVIEWA_AI_SERVICE_URL=https://your-colab-url.ngrok-free.app
+INTERVIEWA_DATABASE_URL=sqlite:///./interviewa.db
+INTERVIEWA_REDIS_URL=redis://localhost:6379/0
+INTERVIEWA_GROQ_API_KEY=gsk_your_key_here
+INTERVIEWA_CHROMA_HOST=localhost
+INTERVIEWA_CHROMA_PORT=8000`,
     frontendDeps: `cd frontend
 npm install`,
     frontendStart: `npm run dev`
@@ -221,22 +221,22 @@ npm install`,
                         </thead>
                         <tbody>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>ai_service_url</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>INTERVIEWA_AI_SERVICE_URL</td>
                             <td style={{ padding: "6px 8px" }}>Ngrok URL from Colab</td>
                             <td style={{ padding: "6px 8px", color: "var(--muted)" }}>Required</td>
                           </tr>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>database_url</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>INTERVIEWA_DATABASE_URL</td>
                             <td style={{ padding: "6px 8px" }}>Session database url</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>sqlite:///...</td>
                           </tr>
                           <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>redis_url</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>INTERVIEWA_REDIS_URL</td>
                             <td style={{ padding: "6px 8px" }}>Redis Cache address</td>
                             <td style={{ padding: "6px 8px", fontFamily: "monospace" }}>redis://...</td>
                           </tr>
                           <tr>
-                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>groq_api_key</td>
+                            <td style={{ padding: "6px 8px", fontFamily: "monospace", color: "var(--text-strong)" }}>INTERVIEWA_GROQ_API_KEY</td>
                             <td style={{ padding: "6px 8px" }}>Groq API key for evaluation fallback</td>
                             <td style={{ padding: "6px 8px", color: "var(--muted)" }}>Optional</td>
                           </tr>
@@ -282,7 +282,7 @@ npm install`,
                       },
                       {
                         title: "Copy the endpoint URL & Save",
-                        desc: "Copy the generated AI_SERVICE_URL ngrok link, and save it in backend/.env under ai_service_url.",
+                        desc: "Copy the generated AI_SERVICE_URL ngrok link, and save it in backend/.env under INTERVIEWA_AI_SERVICE_URL.",
                         link: null
                       }
                     ].map((step, idx) => (

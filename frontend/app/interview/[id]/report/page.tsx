@@ -63,6 +63,9 @@ export default function ReportPage() {
             <p className="muted" style={{ fontSize: 13, fontWeight: 500 }}>Generating report...</p>
           </div>
         </main>
+        <style>{`
+          @keyframes spin { to { transform: rotate(360deg); } }
+        `}</style>
       </>
     );
 

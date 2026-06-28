@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  baseURL: process.env.NEXT_PUBLIC_INTERVIEWA_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 });
 
 api.interceptors.request.use(
@@ -11,20 +11,20 @@ api.interceptors.request.use(
       let sessionId = "local";
       const hostname = window.location.hostname;
       if (hostname !== "localhost" && hostname !== "127.0.0.1") {
-        let storedId = localStorage.getItem("user_session_id");
+        let storedId = localStorage.getItem("interviewa_user_session_id") || localStorage.getItem("user_session_id");
         if (!storedId) {
           storedId = typeof crypto !== "undefined" && crypto.randomUUID 
             ? crypto.randomUUID() 
             : Math.random().toString(36).substring(2) + Date.now().toString(36);
-          localStorage.setItem("user_session_id", storedId);
+          localStorage.setItem("interviewa_user_session_id", storedId);
         }
         sessionId = storedId;
       }
       config.headers["X-User-Session-Id"] = sessionId;
 
       // 2. Attach dynamic AI service url and Groq API key overrides if present
-      const customUrl = localStorage.getItem("ai_service_url");
-      const customGroqKey = localStorage.getItem("groq_api_key");
+      const customUrl = localStorage.getItem("interviewa_ai_service_url") || localStorage.getItem("ai_service_url");
+      const customGroqKey = localStorage.getItem("interviewa_groq_api_key") || localStorage.getItem("groq_api_key");
 
       if (customUrl) {
         config.headers["X-AI-Service-Url"] = customUrl;
