@@ -147,9 +147,14 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <Link href="/interview/new" className="button-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
-              <Plus size={14} /> New interview
-            </Link>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <Link href="/interview/new" className="button-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
+                <Plus size={14} /> New interview
+              </Link>
+              <Link href="/interview/tech-stack" className="button-primary" style={{ padding: "8px 14px", fontSize: 12 }}>
+                <Sparkles size={14} /> Tech Stack Deep Dive
+              </Link>
+            </div>
           </div>
 
           {/* Stats Section */}

@@ -21,6 +21,12 @@ ROUND_CONFIGS = {
         "task": "question_generation",
         "prompt_hint": "language-specific, frameworks, tools, concepts from candidate's stack"
     },
+    "extra_tech": {
+        "name": "Extra Technical Round",
+        "count": 3,
+        "task": "question_generation",
+        "prompt_hint": "additional language, framework, library, and tool-specific questions based on the candidate's stack"
+    },
     "hr": {
         "name": "HR Round",
         "count": 4,
@@ -212,6 +218,14 @@ This is a Technical Core round.
 CRITICAL INSTRUCTIONS:
 - You MUST ask core subject questions as well as other technical stack questions.
 - Maintain a balance of approximately 40% core computer science subject questions (e.g., database indexing/transactions, OS threads/processes/memory management, computer networking protocols, OOP/FP fundamentals) and 60% other technical questions (specific language features, frameworks, libraries, and tools relevant to the candidate's stack).
+- Set "is_coding" to false for these questions.
+""",
+    "extra_tech": """
+This is an Extra Technical round.
+CRITICAL INSTRUCTIONS:
+- You MUST ask additional technical questions focusing specifically on the candidate's core languages, frameworks, libraries, and tools.
+- Dive deep into specific features, best practices, and advanced concepts of the technologies they use.
+- IMPORTANT: You MUST progressively increase the difficulty of the questions. Always start with an easy, foundational question and gradually build up to highly advanced, hard-level questions by the end of the round.
 - Set "is_coding" to false for these questions.
 """,
     "hr": """
