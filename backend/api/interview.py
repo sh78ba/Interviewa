@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
 from pydantic import BaseModel
@@ -6,11 +6,12 @@ from typing import Optional
 import os, shutil, uuid, asyncio, json
 
 from core.database import get_db
-from models.models import Interview, Question, Answer, Report
+from models.models import Interview, Question, Answer, Report, InterviewMessage
 from services.resume_service import parse_pdf, extract_profile
 from services.rag_service import ingest_resume, search_resume, delete_resume
 from services.question_service import generate_questions, ROUND_CONFIGS
 from services.evaluation_service import evaluate_answer, generate_report
+from services.llm_service import llm
 from api.dependencies import get_user_session, get_ai_credentials
 from core.logger import logger
 
@@ -480,6 +481,116 @@ async def evaluate_pending_answers(
     await db.commit()
 
 
+class InteractRequest(BaseModel):
+    question_id: str
+    text: str
+
+@router.post("/{interview_id}/interact")
+async def interact_with_ai(
+    interview_id: str,
+    req: InteractRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_user_session),
+    creds: dict = Depends(get_ai_credentials)
+):
+    import json
+    
+    result = await db.execute(select(Question).where(Question.id == req.question_id))
+    q = result.scalar_one_or_none()
+    if not q:
+        raise HTTPException(404, "Question not found")
+        
+    result = await db.execute(select(Interview).where(Interview.id == interview_id).where(Interview.user_id == user_id))
+    iv = result.scalar_one_or_none()
+    if not iv:
+        raise HTTPException(404, "Interview not found")
+
+    user_msg = InterviewMessage(
+        interview_id=interview_id,
+        question_id=req.question_id,
+        role="user",
+        content=req.text
+    )
+    db.add(user_msg)
+    await db.commit()
+
+    result = await db.execute(
+        select(InterviewMessage)
+        .where(InterviewMessage.question_id == req.question_id)
+        .order_by(InterviewMessage.created_at)
+    )
+    history = result.scalars().all()
+    history_text = "\n".join([f"{msg.role.capitalize()}: {msg.content}" for msg in history])
+
+    user_turns = history_text.count("User:")
+    turn_instruction = ""
+    if user_turns >= 3:
+        turn_instruction = "\n- CRITICAL: The user has provided multiple responses. You MUST wrap up, acknowledge their effort, and set action to \"complete\"."
+
+    prompt = f"""You are an AI technical interviewer. 
+The current interview question is: "{q.question_text}"
+
+Here is the conversation so far for this question:
+{history_text}
+
+Analyze the user's latest input. This is a highly interactive, two-way interview.
+- If the user's answer is brief, incomplete, or if they ask a clarifying question, you MUST respond with a follow-up question, nudge, or clarification to keep the conversation going. Set action to "reply".
+- If the user is struggling, give them a small hint. Set action to "reply".
+- If the user has fully and deeply answered the question, or explicitly says they are done, acknowledge their answer and move on. Set action to "complete".{turn_instruction}
+
+Return ONLY a valid JSON object in this format (no markdown, no backticks, just the raw JSON object):
+{{
+  "action": "reply" | "complete",
+  "response": "Your short spoken conversational response"
+}}
+"""
+    import re
+    try:
+        llm_response = await llm(prompt, task="hr", ai_service_url=creds.get("ai_service_url"), groq_api_key=creds.get("groq_api_key"))
+        # Extract JSON using regex if there's extra text
+        json_match = re.search(r'\\{.*?\\}', llm_response, re.DOTALL)
+        if json_match:
+            parsed = json.loads(json_match.group(0))
+        else:
+            parsed = json.loads(llm_response.replace("```json", "").replace("```", "").strip())
+            
+        action = parsed.get("action", "reply")
+        response_text = parsed.get("response", "Please continue.")
+    except Exception as e:
+        logger.error(f"Failed to parse LLM response for interact: {e}")
+        action = "reply"
+        response_text = "I'm sorry, could you repeat that or continue your thought?"
+
+    ai_msg = InterviewMessage(
+        interview_id=interview_id,
+        question_id=req.question_id,
+        role="ai",
+        content=response_text
+    )
+    db.add(ai_msg)
+    
+    if action == "complete":
+        final_answer_text = history_text + f"\nAi: {response_text}"
+        db.add(Answer(
+            interview_id=interview_id,
+            question_id=req.question_id,
+            round_name=q.round_name,
+            answer_text=final_answer_text,
+            code="",
+            score=-1.0,
+            feedback="Pending evaluation",
+            better_answer=""
+        ))
+        iv.current_question_index += 1
+        
+    await db.commit()
+
+    return {
+        "action": action,
+        "response": response_text
+    }
+
+
 # ── Submit answer ────────────────────────────────────────────────────────────
 class AnswerRequest(BaseModel):
     question_id: str
@@ -732,3 +843,145 @@ async def delete_interview(
     await delete_resume(interview_id)
 
     return {"message": "Interview deleted"}
+
+@router.websocket("/ws/{interview_id}")
+async def interview_websocket(
+    websocket: WebSocket,
+    interview_id: str,
+    user_id: str = "local",
+    ai_service_url: str = None,
+    groq_api_key: str = None,
+    db: AsyncSession = Depends(get_db)
+):
+    await websocket.accept()
+    from api.agent import interview_agent
+    from services.speech_service import transcribe
+    
+    # 1. Validate interview
+    result = await db.execute(select(Interview).where(Interview.id == interview_id).where(Interview.user_id == user_id))
+    iv = result.scalar_one_or_none()
+    if not iv:
+        await websocket.close(code=1008, reason="Interview not found")
+        return
+        
+    try:
+        while True:
+            # 2. Wait for message from frontend (audio bytes or json string)
+            message = await websocket.receive()
+            
+            # Refresh iv to get latest round/question indices
+            await db.refresh(iv)
+            
+            # 3. Get current question
+            q_res = await db.execute(
+                select(Question)
+                .where(Question.interview_id == interview_id)
+                .where(Question.round_index == iv.current_round)
+                .order_by(Question.order_index)
+            )
+            questions = q_res.scalars().all()
+            
+            if iv.current_question_index >= len(questions):
+                await websocket.send_json({"action": "error", "response": "Interview completed."})
+                continue
+            
+            q = questions[iv.current_question_index]
+            
+            text = ""
+            if "bytes" in message:
+                # Transcribe audio chunk
+                try:
+                    text = await transcribe(message["bytes"], ai_service_url)
+                    await websocket.send_json({"action": "transcribed", "text": text})
+                except Exception as e:
+                    logger.error(f"Transcription failed: {e}")
+                    await websocket.send_json({"action": "error", "response": "Could not transcribe audio."})
+                    continue
+            elif "text" in message:
+                try:
+                    data = json.loads(message["text"])
+                    text = data.get("text", "")
+                except:
+                    text = message["text"]
+            
+            if not text.strip():
+                await websocket.send_json({"action": "reply", "response": "I didn't quite catch that. Could you please repeat?"})
+                continue
+                
+            # 4. Save user message to DB
+            user_msg = InterviewMessage(
+                interview_id=interview_id,
+                question_id=q.id,
+                role="user",
+                content=text
+            )
+            db.add(user_msg)
+            await db.commit()
+            
+            # 5. Fetch history
+            res = await db.execute(
+                select(InterviewMessage)
+                .where(InterviewMessage.question_id == q.id)
+                .order_by(InterviewMessage.created_at)
+            )
+            history = res.scalars().all()
+            history_text = "\n".join([f"{m.role.capitalize()}: {m.content}" for m in history])
+            
+            # 6. Run LangGraph Agent
+            state = {
+                "interview_id": interview_id,
+                "question_id": q.id,
+                "question_text": q.question_text,
+                "history_text": history_text,
+                "last_user_input": text,
+                "ai_service_url": ai_service_url,
+                "groq_api_key": groq_api_key,
+                "action": None,
+                "response": None
+            }
+            
+            new_state = await interview_agent.ainvoke(state)
+            
+            action = new_state.get("action", "reply")
+            response_text = new_state.get("response", "Please continue.")
+            
+            # 7. Save AI message
+            ai_msg = InterviewMessage(
+                interview_id=interview_id,
+                question_id=q.id,
+                role="ai",
+                content=response_text
+            )
+            db.add(ai_msg)
+            
+            # 8. Complete logic
+            if action == "complete":
+                final_answer_text = history_text + f"\nAi: {response_text}"
+                db.add(Answer(
+                    interview_id=interview_id,
+                    question_id=q.id,
+                    round_name=q.round_name,
+                    answer_text=final_answer_text,
+                    code="",
+                    score=-1.0,
+                    feedback="Pending evaluation",
+                    better_answer=""
+                ))
+                iv.current_question_index += 1
+                
+            await db.commit()
+            
+            # 9. Send back
+            await websocket.send_json({
+                "action": action,
+                "response": response_text
+            })
+
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket disconnected for interview {interview_id}")
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        try:
+            await websocket.close(code=1011)
+        except:
+            pass
