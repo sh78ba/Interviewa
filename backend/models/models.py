@@ -43,6 +43,15 @@ class Question(Base):
     what_to_look  = Column(Text, default="")
     is_coding     = Column(Boolean, default=False)
 
+class InterviewMessage(Base):
+    __tablename__ = "interviewa_messages"
+    id            = Column(String, primary_key=True, default=gen_id)
+    interview_id  = Column(String, nullable=False)
+    question_id   = Column(String, nullable=False)
+    role          = Column(String, nullable=False)  # "user" or "ai"
+    content       = Column(Text, nullable=False)
+    created_at    = Column(DateTime, server_default=func.now())
+
 class Answer(Base):
     __tablename__ = "interviewa_answers"
     id            = Column(String, primary_key=True, default=gen_id)

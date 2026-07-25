@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useRealTimeInterview } from "@/hooks/useRealTimeInterview";
 import { 
   Volume2, Mic, Play, Square, Award, Clock, ArrowLeft, 
   CheckCircle, Activity, Info, Sparkles, Terminal, ChevronRight, AlertCircle
@@ -74,10 +75,12 @@ export default function InterviewRoom() {
   const { id } = useParams();
   const router = useRouter();
 
+  const [hasJoined, setHasJoined] = useState(false);
   const [phase, setPhase] = useState<Phase>("loading");
   const [question, setQuestion] = useState<Question | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState<Question | null>(null);
   const [transcript, setTranscript] = useState("");
+  const [chatLog, setChatLog] = useState<{role: "user" | "ai", text: string}[]>([]);
   const [code, setCode] = useState("// Write your solution here\n");
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -91,17 +94,32 @@ export default function InterviewRoom() {
   const startListeningRef = useRef<(() => Promise<void>) | null>(null);
   const processAnswerRef = useRef<((blob: Blob) => Promise<void>) | null>(null);
 
+  const stopListeningRefForSilence = useRef<(() => void) | null>(null);
+
   const onRecordingComplete = useCallback((blob: Blob) => {
     void processAnswerRef.current?.(blob);
   }, []);
 
-  const { startRecording, stopRecording, forceStop } = useAudioRecorder(onRecordingComplete);
+  const onSilenceDetected = useCallback(() => {
+    stopListeningRefForSilence.current?.();
+  }, []);
+
+  const onSilenceBroken = useCallback(() => {}, []);
+
+  const { startRecording, stopRecording, forceStop } = useAudioRecorder(
+    onRecordingComplete,
+    onSilenceDetected,
+    onSilenceBroken
+  );
 
   const cancelSpeech = useCallback(() => {
     currentSpeechIdRef.current++;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
+    }
+    if (typeof window !== "undefined" && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   }, []);
 
@@ -136,11 +154,24 @@ export default function InterviewRoom() {
         audioRef.current = audio;
         audio.onended = () => resolve();
         audio.onerror = () => resolve();
-        audio.play();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            console.error("Autoplay blocked", e);
+            resolve();
+          });
+        }
       } catch {
-        // If TTS fails, just wait 2s and continue
+        // If Colab TTS fails (e.g. server crash), fallback to native browser TTS
         if (speechId === currentSpeechIdRef.current) {
-          setTimeout(resolve, 2000);
+          if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.onend = () => resolve();
+            utterance.onerror = () => resolve();
+            window.speechSynthesis.speak(utterance);
+          } else {
+            setTimeout(resolve, 2000);
+          }
         } else {
           resolve();
         }
@@ -178,6 +209,7 @@ export default function InterviewRoom() {
     setPhase("loading");
     setStatusText("Loading next question...");
     setTranscript("");
+    setChatLog([]);
     setCode("// Write your solution here\n");
     setFeedback(null);
     finalizedRef.current = false;
@@ -247,44 +279,45 @@ export default function InterviewRoom() {
     }
   }, [startRecording]);
 
-  // ── Transcribe + evaluate ────────────────────────────────────────────────
+  const handleWSReply = useCallback(async (action: string, responseOrText: string) => {
+    if (action === "transcribed") {
+      setTranscript(responseOrText);
+      if (responseOrText.trim()) {
+        setChatLog(prev => [...prev, {role: "user", text: responseOrText}]);
+      }
+      setStatusText("Analyzing your response...");
+    } else if (action === "reply") {
+      setPhase("ai_speaking");
+      setStatusText("AI is replying...");
+      if (responseOrText) {
+        setChatLog(prev => [...prev, {role: "ai", text: responseOrText}]);
+      }
+      await speak(responseOrText);
+      // After AI finishes speaking, resume listening for the same question
+      void startListeningRef.current?.();
+    } else if (action === "complete") {
+      setPhase("processing");
+      setStatusText("Answer recorded. Moving to next question...");
+      if (responseOrText) {
+        setPhase("ai_speaking");
+        setChatLog(prev => [...prev, {role: "ai", text: responseOrText}]);
+        await speak(responseOrText);
+      }
+      await fetchAndSpeakRef.current?.();
+    }
+  }, [speak]);
+
+  const { isConnected, sendAudioChunk } = useRealTimeInterview(id as string, handleWSReply);
+
+  // ── Transcribe + evaluate (Now streams to WebSocket) ───────────────────
   const processAnswer = useCallback(async (blob: Blob) => {
     if (!question) return;
     setPhase("processing");
-    setStatusText("Transcribing your answer...");
+    setStatusText("Processing your input...");
 
-    let text = "";
-    try {
-      // Step 1 — transcribe audio
-      const form = new FormData();
-      form.append("audio", blob, "audio.webm");
-      const transcribeRes = await api.post("/api/speech/transcribe", form);
-      text = transcribeRes.data.text || "";
-      setTranscript(text);
-    } catch (e) {
-      console.error("Transcription failed, falling back to empty response", e);
-    }
-
-    try {
-      // Step 2 — evaluate answer
-      setStatusText("Recording your answer...");
-      await api.post(`/api/interview/${id}/answer`, {
-        question_id: question.question_id,
-        answer_text: text,
-        code: "",
-      });
-
-      // Do not show interim scores. Move to next question.
-      setPhase("processing");
-      setStatusText("Answer recorded. Moving to next question...");
-      await new Promise((r) => setTimeout(r, 1000));
-      await fetchAndSpeakRef.current?.();
-    } catch {
-      setStatusText("Something went wrong. Moving on...");
-      await new Promise((r) => setTimeout(r, 2000));
-      await fetchAndSpeakRef.current?.();
-    }
-  }, [question, id]);
+    // Send audio via WebSocket to the agent
+    sendAudioChunk(blob);
+  }, [question, sendAudioChunk]);
 
   useEffect(() => {
     fetchAndSpeakRef.current = fetchAndSpeak;
@@ -301,6 +334,10 @@ export default function InterviewRoom() {
 
     stopRecording();
   }, [stopRecording]);
+
+  useEffect(() => {
+    stopListeningRefForSilence.current = stopListening;
+  }, [stopListening]);
 
   // ── Submit coding answer manually ────────────────────────────────────────
   const submitCoding = useCallback(async () => {
@@ -365,16 +402,13 @@ export default function InterviewRoom() {
   }, [endInterview]);
 
   // ── Boot ─────────────────────────────────────────────────────────────────
+  // User must click "Join" to start, avoiding Autoplay restrictions
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void fetchAndSpeak();
-    }, 0);
     return () => {
-      window.clearTimeout(timer);
       audioRef.current?.pause();
       forceStop();
     };
-  }, [fetchAndSpeak, forceStop]);
+  }, [forceStop]);
 
   // ── Sync language on question load ───────────────────────────────────────
   useEffect(() => {
@@ -415,6 +449,55 @@ export default function InterviewRoom() {
     cancelSpeech();
     void startListeningRef.current?.();
   };
+
+  if (!hasJoined) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--bg)",
+          padding: 24,
+          flexDirection: "column",
+          gap: 24
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: 32, fontWeight: 500, color: "var(--text-strong)", marginBottom: 8 }}>
+            Interview Room
+          </h1>
+          <p style={{ color: "var(--text-dim)", fontSize: 16, maxWidth: 400 }}>
+            Your microphone and speakers will be used during this session.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setHasJoined(true);
+            void fetchAndSpeak();
+          }}
+          style={{
+            background: "var(--text-strong)",
+            color: "var(--bg)",
+            border: "none",
+            borderRadius: 8,
+            padding: "16px 32px",
+            fontSize: 16,
+            fontWeight: 500,
+            cursor: "pointer",
+            transition: "transform 0.2s ease, opacity 0.2s ease",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+          }}
+          onMouseOver={e => e.currentTarget.style.transform = "translateY(-2px)"}
+          onMouseOut={e => e.currentTarget.style.transform = "none"}
+          onMouseDown={e => e.currentTarget.style.transform = "translateY(0)"}
+        >
+          Join Interview
+        </button>
+      </main>
+    );
+  }
 
   if (phase === "done")
     return (
@@ -651,21 +734,7 @@ export default function InterviewRoom() {
         </button>
       )}
 
-      {/* Done answering voice */}
-      {phase === "listening" && (
-        <button
-          onClick={stopListening}
-          className="button-primary"
-          style={{
-            width: "100%",
-            padding: "12px 18px",
-            background: "#111",
-            color: "white",
-          }}
-        >
-          <Square size={12} fill="white" /> Done answering
-        </button>
-      )}
+
 
       {/* Submitting Code */}
       {question?.is_coding && phase === "feedback" && !feedback && (
@@ -716,8 +785,8 @@ export default function InterviewRoom() {
       {hudPanel}
       {avatarPanel}
       {questionPanel}
-      {transcript && (
-        <div className="surface" style={{ padding: 16, borderRadius: 8 }}>
+      {chatLog.length > 0 && (
+        <div className="surface" style={{ padding: 16, borderRadius: 8, maxHeight: 300, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
           <div
             style={{
               fontSize: 10,
@@ -727,11 +796,28 @@ export default function InterviewRoom() {
               letterSpacing: "0.04em"
             }}
           >
-            SPOKEN TRANSCRIPT
+            CONVERSATION
           </div>
-          <p style={{ fontSize: 12, color: "var(--text)", lineHeight: 1.5 }}>
-            {transcript}
-          </p>
+          {chatLog.map((log, i) => (
+            <div key={i} style={{
+              alignSelf: log.role === "user" ? "flex-end" : "flex-start",
+              background: log.role === "user" ? "#111" : "var(--bg-soft)",
+              color: log.role === "user" ? "#fff" : "var(--text-strong)",
+              padding: "8px 12px",
+              borderRadius: 8,
+              maxWidth: "85%",
+              fontSize: 12,
+              lineHeight: 1.5,
+              border: log.role === "ai" ? "1px solid var(--line)" : "none"
+            }}>
+              {log.text}
+            </div>
+          ))}
+          {phase === "listening" && (
+            <div style={{ alignSelf: "flex-end", fontSize: 10, color: "var(--muted)", fontStyle: "italic", marginTop: -4 }}>
+              Listening...
+            </div>
+          )}
         </div>
       )}
       {actionsPanel}
@@ -757,7 +843,7 @@ export default function InterviewRoom() {
   ) : null;
 
   const transcriptPanel = (
-    <div className="surface" style={{ padding: 24, borderRadius: 8, flex: 1, display: "flex", flexDirection: "column", minHeight: 240 }}>
+    <div className="surface" style={{ padding: 24, borderRadius: 8, flex: 1, display: "flex", flexDirection: "column", minHeight: 240, maxHeight: 400, overflowY: "auto" }}>
       <div
         style={{
           fontSize: 10,
@@ -767,17 +853,36 @@ export default function InterviewRoom() {
           letterSpacing: "0.04em"
         }}
       >
-        SPOKEN TRANSCRIPT
+        CONVERSATION
       </div>
-      {transcript ? (
-        <p style={{ fontSize: 13, color: "var(--text-strong)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-          {transcript}
-        </p>
+      {chatLog.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {chatLog.map((log, idx) => (
+            <div key={idx} style={{ 
+              alignSelf: log.role === "user" ? "flex-end" : "flex-start",
+              background: log.role === "user" ? "#111" : "var(--bg-soft)",
+              color: log.role === "user" ? "#fff" : "var(--text-strong)",
+              padding: "10px 14px",
+              borderRadius: 8,
+              maxWidth: "80%",
+              fontSize: 13,
+              lineHeight: 1.5,
+              border: log.role === "ai" ? "1px solid var(--line)" : "none"
+            }}>
+              {log.text}
+            </div>
+          ))}
+          {phase === "listening" && (
+            <div style={{ alignSelf: "flex-end", fontSize: 11, color: "var(--muted)", fontStyle: "italic" }}>
+              Listening...
+            </div>
+          )}
+        </div>
       ) : (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 8, color: "var(--muted)" }}>
           <Mic size={24} style={{ opacity: 0.5 }} />
           <span style={{ fontSize: 12, fontStyle: "italic" }}>
-            {phase === "listening" ? "Listening... start speaking your answer." : "Interviewer is speaking... transcript will appear here."}
+            {phase === "listening" ? "Listening... just speak and pause when you're done." : "Interviewer is speaking..."}
           </span>
         </div>
       )}
