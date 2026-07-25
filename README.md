@@ -39,7 +39,8 @@ Interviewa helps candidates and teams run realistic interview simulations on the
 
 - AI-powered question generation and answer evaluation
 - Resume-aware retrieval pipeline (with optional ChromaDB)
-- Voice flow (speech generation + transcription)
+- Interactive two-way voice flow (speech generation, transcription, and auto-submission via VAD)
+- LangGraph-powered AI agent for dynamic follow-up questions and conversational turn-capping
 - Coding and non-coding round support
 - Local single-user interview dashboard
 - Paginated interview history and deletion
