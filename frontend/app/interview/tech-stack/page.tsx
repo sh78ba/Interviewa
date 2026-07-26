@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import api from "@/lib/api";
@@ -25,6 +25,20 @@ export default function TechStackInterview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [aiServiceUrl, setAiServiceUrl] = useState("");
+  const [groqApiKey, setGroqApiKey] = useState("");
+  const [isLocalhost, setIsLocalhost] = useState(true);
+
+  useEffect(() => {
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "localhost";
+    setIsLocalhost(hostname === "localhost" || hostname === "127.0.0.1");
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAiServiceUrl(localStorage.getItem("interviewa_ai_service_url") || localStorage.getItem("ai_service_url") || "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setGroqApiKey(localStorage.getItem("interviewa_groq_api_key") || localStorage.getItem("groq_api_key") || "");
+  }, []);
+
   const handleStart = async () => {
     if (questionCount < 5 || questionCount > 15) {
       setError("Number of questions must be between 5 and 15.");
@@ -33,6 +47,18 @@ export default function TechStackInterview() {
 
     setLoading(true);
     setError("");
+
+    if (aiServiceUrl) {
+      localStorage.setItem("interviewa_ai_service_url", aiServiceUrl);
+    } else {
+      localStorage.removeItem("interviewa_ai_service_url");
+    }
+
+    if (groqApiKey) {
+      localStorage.setItem("interviewa_groq_api_key", groqApiKey);
+    } else {
+      localStorage.removeItem("interviewa_groq_api_key");
+    }
 
     try {
       const form = new FormData();
@@ -226,6 +252,56 @@ export default function TechStackInterview() {
               <div style={{ padding: "12px", background: "rgba(239,68,68,0.1)", borderLeft: "3px solid #ef4444", borderRadius: 4, fontSize: 12, color: "#ef4444" }}>
                 {error}
               </div>
+            )}
+
+            {!isLocalhost && (
+              <div style={{ borderTop: "1px solid var(--line)", paddingTop: 16, marginTop: 8 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-strong)", marginBottom: 12 }}>
+                  Hosting Overrides (Optional)
+                </p>
+              <div style={{ display: "flex", gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <label className="field-label" style={{ fontSize: 12, marginBottom: 8, display: "block" }}>Groq API Key</label>
+                  <input
+                    type="password"
+                    value={groqApiKey}
+                    onChange={(e) => setGroqApiKey(e.target.value)}
+                    placeholder="gsk_..."
+                    className="input"
+                    style={{
+                      fontSize: 13,
+                      padding: "10px 12px",
+                      width: "100%",
+                      background: "var(--panel-strong)",
+                      color: "var(--text-strong)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 6,
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label className="field-label" style={{ fontSize: 12, marginBottom: 8, display: "block" }}>Colab API URL</label>
+                  <input
+                    type="text"
+                    value={aiServiceUrl}
+                    onChange={(e) => setAiServiceUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="input"
+                    style={{
+                      fontSize: 13,
+                      padding: "10px 12px",
+                      width: "100%",
+                      background: "var(--panel-strong)",
+                      color: "var(--text-strong)",
+                      border: "1px solid var(--line)",
+                      borderRadius: 6,
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
             )}
 
             <div style={{ marginTop: 16 }}>
